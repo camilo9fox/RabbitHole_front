@@ -1,0 +1,353 @@
+'use client';
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTheme } from 'next-themes';
+import Text from '@/components/commons/atoms/Text';
+import Button from '@/components/commons/atoms/Button';
+import Input from '@/components/commons/atoms/Input';
+import Card from '@/components/commons/atoms/Card';
+import Image from 'next/image';
+import { useForm, FormProvider } from 'react-hook-form';
+import gsap from 'gsap';
+
+// Interfaces
+interface CustomizationOptions {
+  color: string;
+  size: string;
+  text: string;
+  font: string;
+  textColor: string;
+  image: string | null;
+  textSize: number;
+  imageSize: number;
+  textPositionX: number;
+  textPositionY: number;
+  imagePositionX: number;
+  imagePositionY: number;
+  basePrice: number;
+}
+
+// Opciones predefinidas
+const colorOptions = [
+  { 
+    id: 'white', 
+    label: 'Blanco', 
+    value: '#FFFFFF', 
+    textPreview: '#000000',
+    image: 'https://i.ibb.co/sTXD0K8/69f226b6-5da0-474e-987f-016e34f514d3.png',
+    priceModifier: 0 // Sin costo adicional
+  },
+  { 
+    id: 'black', 
+    label: 'Negro', 
+    value: '#000000', 
+    textPreview: '#FFFFFF',
+    image: 'https://i.ibb.co/qYpvyHQ/702fe463-73a9-4df6-81cb-2f7e23d3a9bd.png',
+    priceModifier: 0 // Sin costo adicional
+  },
+  { 
+    id: 'gray', 
+    label: 'Gris', 
+    value: '#808080', 
+    textPreview: '#FFFFFF',
+    image: 'https://i.ibb.co/SX3cFgG/110efad0-b9ba-4938-8c68-cedf4ebef567.png',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'blue', 
+    label: 'Azul', 
+    value: '#0066CC', 
+    textPreview: '#FFFFFF',
+    image: 'https://i.ibb.co/prXRZBQ/363609eb-ce54-4c6a-b765-003dd5b2eb82.png',
+    priceModifier: 1000 // 1000 pesos adicionales
+  },
+  { 
+    id: 'red', 
+    label: 'Rojo', 
+    value: '#CC0000', 
+    textPreview: '#FFFFFF',
+    image: 'https://i.ibb.co/ZpTnz5c/c8a5078a-9727-404d-b1d8-81e138b30535.png',
+    priceModifier: 1000 // 1000 pesos adicionales
+  },
+];
+
+const sizeOptions = [
+  { id: 'xs', label: 'XS', priceModifier: 0 },
+  { id: 's', label: 'S', priceModifier: 0 },
+  { id: 'm', label: 'M', priceModifier: 0 },
+  { id: 'l', label: 'L', priceModifier: 500 },
+  { id: 'xl', label: 'XL', priceModifier: 1000 },
+  { id: 'xxl', label: '2XL', priceModifier: 1500 },
+];
+
+const fontOptions = [
+  { id: 'arial', label: 'Arial', value: 'Arial, sans-serif' },
+  { id: 'roboto', label: 'Roboto', value: 'Roboto, sans-serif' },
+  { id: 'montserrat', label: 'Montserrat', value: 'Montserrat, sans-serif' },
+  { id: 'oswald', label: 'Oswald', value: 'Oswald, sans-serif' },
+  { id: 'pacifico', label: 'Pacifico', value: 'Pacifico, cursive' },
+];
+
+const textColorOptions = [
+  { id: 'white', label: 'Blanco', value: '#FFFFFF' },
+  { id: 'black', label: 'Negro', value: '#000000' },
+  { id: 'blue', label: 'Azul', value: '#0066CC' },
+  { id: 'red', label: 'Rojo', value: '#CC0000' },
+  { id: 'gold', label: 'Dorado', value: '#FFD700' },
+];
+
+// Funciones auxiliares para reducir la complejidad cognitiva
+const getSizeButtonStyle = (isSelected: boolean, isDarkMode: boolean): string => {
+  if (isSelected) {
+    return 'bg-blue-600 border-blue-600 text-white';
+  }
+  return isDarkMode 
+    ? 'bg-gray-800 border-gray-700 text-gray-200' 
+    : 'bg-gray-50 border-gray-500 text-gray-800';
+};
+
+// Esta función es similar pero se mantiene separada para facilitar cambios futuros específicos
+const getFontButtonStyle = (isSelected: boolean, isDarkMode: boolean): string => {
+  if (isSelected) {
+    return 'bg-blue-600 border-blue-600 text-white font-bold';
+  }
+  return isDarkMode 
+    ? 'bg-gray-800 border-gray-700 text-gray-200' 
+    : 'bg-white border-gray-400 text-gray-800';
+};
+
+// Componente principal
+const Customize = () => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
+  
+  // Referencias para animaciones y arrastre
+  const previewRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  
+  // Estado para la previsualización
+  const [previewText, setPreviewText] = useState('Tu texto aquí');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPageMounted, setIsPageMounted] = useState(false);
+  
+  // Configurar react-hook-form
+  const methods = useForm<CustomizationOptions>({
+    defaultValues: {
+      color: 'white',
+      size: 'm',
+      text: '',
+      font: 'arial',
+      textColor: 'black',
+      image: null,
+      textSize: 24,
+      imageSize: 80,
+      textPositionX: 50,
+      textPositionY: 50,
+      imagePositionX: 50,
+      imagePositionY: 50,
+      basePrice: 10000 // Precio base: 10.000 pesos chilenos
+    }
+  });
+  
+  const { watch, setValue } = methods;
+  const formValues = watch();
+  
+  // Opciones seleccionadas
+  const selectedColorOption = colorOptions.find(option => option.id === formValues.color) || colorOptions[0];
+  const selectedFont = fontOptions.find(option => option.id === formValues.font)?.value || fontOptions[0].value;
+  const selectedTextColor = textColorOptions.find(option => option.id === formValues.textColor)?.value || textColorOptions[0].value;
+  const selectedSizeOption = sizeOptions.find(option => option.id === formValues.size) || sizeOptions[2]; // Default a M
+  
+  // Calcular precio total
+  const calculateTotalPrice = () => {
+    let totalPrice = formValues.basePrice;
+    
+    // Añadir costo por color
+    totalPrice += selectedColorOption.priceModifier;
+    
+    // Añadir costo por talla
+    totalPrice += selectedSizeOption.priceModifier;
+    
+    // Añadir costo por texto (1000 pesos si hay texto)
+    if (formValues.text && formValues.text.trim() !== '') {
+      totalPrice += 1000;
+    }
+    
+    // Añadir costo por imagen (2000 pesos si hay imagen)
+    if (selectedImage) {
+      totalPrice += 2000;
+    }
+    
+    return totalPrice;
+  };
+  
+  const totalPrice = calculateTotalPrice();
+  
+  // Función para formatear precio en pesos chilenos
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+  
+  // Actualizar texto de previsualización cuando cambia el texto del formulario
+  useEffect(() => {
+    if (formValues.text) {
+      setPreviewText(formValues.text);
+    } else {
+      setPreviewText('Tu texto aquí');
+    }
+  }, [formValues.text]);
+  
+  // Manejar carga de imagen
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setSelectedImage(event.target.result as string);
+          setValue('image', event.target.result as string);
+          // Centrar la imagen inicialmente
+          setValue('imagePositionX', 50);
+          setValue('imagePositionY', 50);
+          
+          // Limpiar y deshabilitar el campo de texto cuando se agrega una imagen
+          setValue('text', '');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Función para eliminar la imagen
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setValue('image', null);
+  };
+  
+  // Estado para manejar el arrastre
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragType, setDragType] = useState<'text' | 'image' | null>(null);
+  
+  // Funciones para el arrastre (usando useCallback para evitar dependencias circulares)
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !dragType || !previewRef.current) return;
+    
+    const previewRect = previewRef.current.getBoundingClientRect();
+    
+    // Calcular posición relativa en porcentaje
+    const x = ((e.clientX - previewRect.left) / previewRect.width) * 100;
+    const y = ((e.clientY - previewRect.top) / previewRect.height) * 100;
+    
+    // Limitar dentro del área de la polera
+    const boundedX = Math.max(10, Math.min(90, x));
+    const boundedY = Math.max(10, Math.min(90, y));
+    
+    // Actualizar posición según el tipo
+    if (dragType === 'text') {
+      setValue('textPositionX', boundedX);
+      setValue('textPositionY', boundedY);
+    } else if (dragType === 'image') {
+      setValue('imagePositionX', boundedX);
+      setValue('imagePositionY', boundedY);
+    }
+  }, [isDragging, dragType, setValue]);
+  
+  // Finalizar arrastre
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    setDragType(null);
+    
+    // Eliminar eventos globales
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+  }, [handleDragMove]);
+  
+  // Iniciar arrastre
+  const handleDragStart = useCallback((e: React.MouseEvent, type: 'text' | 'image') => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragType(type);
+    
+    // Agregar eventos globales
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+  }, [handleDragMove, handleDragEnd]);
+  
+  // Limpiar eventos al desmontar
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [handleDragMove, handleDragEnd]);
+  
+  // Control de montaje de la página
+  useEffect(() => {
+    setIsPageMounted(true);
+    
+    return () => {
+      setIsPageMounted(false);
+    };
+  }, []);
+
+  // Animaciones con GSAP
+  useEffect(() => {
+    if (isPageMounted && previewRef.current && optionsRef.current) {
+      const tl = gsap.timeline({ delay: 0.3 });
+      tl.from(previewRef.current, { opacity: 0, scale: 0.95, duration: 0.5 })
+        .from(optionsRef.current, { opacity: 0, y: 20, duration: 0.5 }, "-=0.3");
+      
+      return () => {
+        tl.kill();
+      };
+    }
+  }, [isPageMounted]);
+  
+  // Función para agregar al carrito
+  const handleAddToCart = () => {
+    console.log('Producto personalizado agregado al carrito:', formValues);
+    
+    // Animar la previsualización al agregar al carrito
+    if (previewRef.current) {
+      gsap.to(previewRef.current, {
+        scale: 1.02,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1
+      });
+    }
+    
+    // Aquí podrías añadir lógica para guardar en el carrito
+    // Por ejemplo, usando localStorage o una API
+  };
+  
+  // Solución para problemas de hidratación
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  if (!isMounted) {
+    return (
+      <div className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className={`text-4xl md:text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+              Personaliza tu Polera
+            </h1>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
+              Cargando opciones de personalización...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }

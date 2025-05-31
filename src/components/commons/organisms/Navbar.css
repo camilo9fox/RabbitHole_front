@@ -1,0 +1,111 @@
+/* Estilos específicos para el Navbar */
+
+/* Clase base para el navbar que se adapta al tema */
+.navbar-container {
+  background-color: white;
+  color: black;
+}
+
+/* En modo oscuro */
+:root.dark .navbar-container {
+  background-color: black;
+  color: white;
+}
+
+/* Estilos para los elementos dentro del navbar */
+.navbar-container a,
+.navbar-container button,
+.navbar-container span {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Colores específicos para los enlaces en modo claro */
+.navbar-container a:not([href="/account"]),
+.navbar-container button,
+.navbar-container span {
+  color: black;
+}
+
+/* Colores específicos para los enlaces en modo oscuro */
+:root.dark .navbar-container a:not([href="/account"]),
+:root.dark .navbar-container button,
+:root.dark .navbar-container span {
+  color: white;
+}
+
+/* Quitamos los efectos hover que causan problemas */
+
+/* Asegurar que los iconos sean visibles */
+.navbar-action svg {
+  color: inherit;
+  opacity: 1 !important;
+}
+
+/* Estilos específicos para el logo */
+.navbar-logo span {
+  color: inherit;
+}
+
+/* Asegurar que el botón Mi Cuenta siempre tenga texto blanco */
+.navbar-container a[href="/account"] {
+  color: white !important;
+}
+
+.navbar-container a[href="/account"] span {
+  color: white !important;
+}
+
+/* Asegurar que los enlaces de navegación sean visibles */
+.navbar-container .md\:flex {
+  display: flex !important;
+}
+
+/* Estilos para el modo claro */
+.navbar-container.light-mode {
+  background-color: white;
+  color: black;
+}
+
+/* Estilos para el modo oscuro */
+.navbar-container.dark-mode {
+  background-color: black;
+  color: white;
+}
+
+/* Estilos para los enlaces en modo claro */
+.navbar-container.light-mode a:not([href="/account"]),
+.navbar-container.light-mode button,
+.navbar-container.light-mode span {
+  color: black;
+}
+
+/* Estilos para los enlaces en modo oscuro */
+.navbar-container.dark-mode a:not([href="/account"]),
+.navbar-container.dark-mode button,
+.navbar-container.dark-mode span {
+  color: white;
+}
+
+/* Estilos para el botón Mi Cuenta */
+.navbar-container a[href="/account"] {
+  color: white !important;
+}
+
+/* Asegurar que los elementos sean visibles */
+.navbar-container a,
+.navbar-container button,
+.navbar-container span {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Asegurar que los elementos del menú móvil estén ocultos por defecto */
+.navbar-container .sm\:hidden {
+  display: none !important;
+}
+
+/* Mostrar el menú móvil solo cuando está abierto */
+.navbar-container .sm\:hidden.open {
+  display: block !important;
+}

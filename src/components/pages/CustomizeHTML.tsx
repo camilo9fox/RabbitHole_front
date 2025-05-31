@@ -1,0 +1,675 @@
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { useTheme } from 'next-themes';
+import Text from '@/components/commons/atoms/Text';
+import Button from '@/components/commons/atoms/Button';
+import Card from '@/components/commons/atoms/Card';
+import HTMLCanvasV2 from '@/components/commons/molecules/HTMLCanvasV2';
+import { useForm, FormProvider } from 'react-hook-form';
+import gsap from 'gsap';
+import Image from 'next/image';
+
+// Interfaces
+interface ViewCustomization {
+  text: string;
+  image: string | null;
+  textFont: string;
+  textColor: string;
+  textSize: number;
+  textPositionX: number;
+  textPositionY: number;
+  imagePositionX: number;
+  imagePositionY: number;
+  imageWidth: number;
+  imageHeight: number;
+}
+
+interface CustomizationOptions {
+  color: string;
+  size: string;
+  basePrice: number;
+  details: string;
+  view: 'front' | 'back' | 'left' | 'right';
+  // Personalización independiente para cada vista
+  front: ViewCustomization;
+  back: ViewCustomization;
+  left: ViewCustomization;
+  right: ViewCustomization;
+}
+
+// Opciones predefinidas
+const colorOptions = [
+  { 
+    id: 'white', 
+    label: 'Blanco', 
+    value: '#FFFFFF', 
+    textPreview: '#000000',
+    priceModifier: 0 // Sin costo adicional
+  },
+  { 
+    id: 'black', 
+    label: 'Negro', 
+    value: '#000000', 
+    textPreview: '#FFFFFF',
+    priceModifier: 0 // Sin costo adicional
+  },
+  { 
+    id: 'gray', 
+    label: 'Gris', 
+    value: '#808080', 
+    textPreview: '#FFFFFF',
+    priceModifier: 0 // Sin costo adicional
+  },
+  { 
+    id: 'blue', 
+    label: 'Azul', 
+    value: '#0000FF', 
+    textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'red', 
+    label: 'Rojo', 
+    value: '#FF0000', 
+    textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  }
+];
+
+const sizeOptions = [
+  { id: 'xs', label: 'XS', priceModifier: -1000 }, // 1000 pesos menos
+  { id: 's', label: 'S', priceModifier: -500 }, // 500 pesos menos
+  { id: 'm', label: 'M', priceModifier: 0 }, // Precio base
+  { id: 'l', label: 'L', priceModifier: 500 }, // 500 pesos más
+  { id: 'xl', label: 'XL', priceModifier: 1000 }, // 1000 pesos más
+  { id: 'xxl', label: 'XXL', priceModifier: 1500 } // 1500 pesos más
+];
+
+const fontOptions = [
+  { id: 'arial', label: 'Arial', value: 'Arial' },
+  { id: 'times', label: 'Times New Roman', value: 'Times New Roman' },
+  { id: 'courier', label: 'Courier New', value: 'Courier New' },
+  { id: 'georgia', label: 'Georgia', value: 'Georgia' },
+  { id: 'verdana', label: 'Verdana', value: 'Verdana' }
+];
+
+const textColorOptions = [
+  { id: 'black', label: 'Negro', value: '#000000' },
+  { id: 'white', label: 'Blanco', value: '#FFFFFF' },
+  { id: 'red', label: 'Rojo', value: '#FF0000' },
+  { id: 'blue', label: 'Azul', value: '#0000FF' },
+  { id: 'green', label: 'Verde', value: '#008000' },
+  { id: 'yellow', label: 'Amarillo', value: '#FFFF00' }
+];
+
+// Vistas de la polera
+const tshirtViews = [
+  { id: 'front', label: 'Frente' },
+  { id: 'back', label: 'Espalda' },
+  { id: 'left', label: 'Izquierda' },
+  { id: 'right', label: 'Derecha' }
+];
+
+const CustomizeHTML = () => {
+  // Estado del tema
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
+  
+  // Referencias para animaciones
+  const previewRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  
+  // Estados
+  const [isPageMounted, setIsPageMounted] = useState(false);
+  
+  // Formulario con React Hook Form
+  const methods = useForm<CustomizationOptions>({
+    defaultValues: {
+      color: 'white',
+      size: 'm',
+      basePrice: 15000, // Precio base en pesos chilenos
+      details: '',
+      view: 'front',
+      // Valores predeterminados para cada vista
+      front: {
+        text: '',
+        image: null,
+        textFont: 'Arial',
+        textColor: '#000000',
+        textSize: 24,
+        textPositionX: 250,
+        textPositionY: 250,
+        imagePositionX: 250,
+        imagePositionY: 250,
+        imageWidth: 100,
+        imageHeight: 100
+      },
+      back: {
+        text: '',
+        image: null,
+        textFont: 'Arial',
+        textColor: '#000000',
+        textSize: 24,
+        textPositionX: 250,
+        textPositionY: 250,
+        imagePositionX: 250,
+        imagePositionY: 250,
+        imageWidth: 100,
+        imageHeight: 100
+      },
+      left: {
+        text: '',
+        image: null,
+        textFont: 'Arial',
+        textColor: '#000000',
+        textSize: 24,
+        textPositionX: 250,
+        textPositionY: 250,
+        imagePositionX: 250,
+        imagePositionY: 250,
+        imageWidth: 100,
+        imageHeight: 100
+      },
+      right: {
+        text: '',
+        image: null,
+        textFont: 'Arial',
+        textColor: '#000000',
+        textSize: 24,
+        textPositionX: 250,
+        textPositionY: 250,
+        imagePositionX: 250,
+        imagePositionY: 250,
+        imageWidth: 100,
+        imageHeight: 100
+      }
+    }
+  });
+  
+  const { watch, setValue, register } = methods;
+  const formValues = watch();
+  
+  // Obtener la vista actual
+  const currentView = formValues.view;
+  const currentViewData = formValues[currentView];
+  
+  // Opciones seleccionadas
+  const selectedColorOption = colorOptions.find(option => option.id === formValues.color) ?? colorOptions[0];
+  const selectedFont = currentViewData.textFont || 'Arial';
+  const selectedSizeOption = sizeOptions.find(option => option.id === formValues.size) ?? sizeOptions[2]; // Default a M
+  
+  // Calcular precio total
+  const calculateTotalPrice = () => {
+    let totalPrice = formValues.basePrice;
+    
+    // Añadir costo por color
+    totalPrice += selectedColorOption.priceModifier;
+    
+    // Añadir costo por talla
+    totalPrice += selectedSizeOption.priceModifier;
+    
+    // Añadir costo por texto (1000 pesos si hay texto en cualquier vista)
+    const hasAnyText = Object.values(formValues).some(view => 
+      typeof view === 'object' && 'text' in view && view.text && view.text.trim() !== ''
+    );
+    if (hasAnyText) {
+      totalPrice += 1000;
+    }
+    
+    // Añadir costo por imagen (2000 pesos si hay imagen en cualquier vista)
+    const hasAnyImage = Object.values(formValues).some(view => 
+      typeof view === 'object' && 'image' in view && view.image !== null
+    );
+    if (hasAnyImage) {
+      totalPrice += 2000;
+    }
+    
+    return totalPrice;
+  };
+  
+  const totalPrice = calculateTotalPrice();
+  
+  // Función para formatear precio en pesos chilenos
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+  
+  // Funciones auxiliares para los estilos de botones
+  const getViewButtonClass = (isSelected: boolean) => {
+    if (isSelected) {
+      return 'px-3 py-2 text-sm rounded-full bg-blue-600 text-white';
+    }
+    return 'px-3 py-2 text-sm rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+  };
+  
+  const getSizeButtonClass = (isSelected: boolean) => {
+    if (isSelected) {
+      return 'px-4 py-2 rounded-md bg-blue-600 text-white';
+    }
+    
+    if (isDarkMode) {
+      return 'px-4 py-2 rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+    
+    return 'px-4 py-2 rounded-md bg-gray-100 text-gray-800';
+  };
+  
+  const getFontButtonClass = (isSelected: boolean) => {
+    if (isSelected) {
+      return 'px-3 py-1 text-sm rounded-md bg-blue-600 text-white';
+    }
+    
+    if (isDarkMode) {
+      return 'px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+    
+    return 'px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800';
+  };
+  
+  // Manejar carga de imagen
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          const imageData = event.target.result as string;
+          setValue(`${currentView}.image`, imageData);
+          
+          // Limpiar el campo de texto cuando se agrega una imagen
+          setValue(`${currentView}.text`, '');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Función para eliminar la imagen
+  const handleRemoveImage = () => {
+    setValue(`${currentView}.image`, null);
+  };
+  
+  // Actualizar posición del texto
+  const handleUpdateTextPosition = (x: number, y: number) => {
+    setValue(`${currentView}.textPositionX`, x);
+    setValue(`${currentView}.textPositionY`, y);
+  };
+  
+  // Actualizar tamaño del texto
+  const handleUpdateTextSize = (size: number) => {
+    setValue(`${currentView}.textSize`, size);
+  };
+  
+  // Actualizar posición de la imagen
+  const handleUpdateImagePosition = (x: number, y: number) => {
+    setValue(`${currentView}.imagePositionX`, x);
+    setValue(`${currentView}.imagePositionY`, y);
+  };
+  
+  // Actualizar tamaño de la imagen
+  const handleUpdateImageSize = (width: number, height: number) => {
+    setValue(`${currentView}.imageWidth`, width);
+    setValue(`${currentView}.imageHeight`, height);
+  };
+  
+  // Actualizar cuando cambia la vista
+  useEffect(() => {
+    // Cualquier lógica adicional cuando cambia la vista se puede agregar aquí
+  }, [currentView]);
+  
+  // Control de montaje de la página
+  useEffect(() => {
+    setIsPageMounted(true);
+    
+    return () => {
+      setIsPageMounted(false);
+    };
+  }, []);
+
+  // Animaciones con GSAP
+  useEffect(() => {
+    if (isPageMounted && previewRef.current && optionsRef.current) {
+      const tl = gsap.timeline({ delay: 0.3 });
+      tl.from(previewRef.current, { opacity: 0, scale: 0.95, duration: 0.5 })
+        .from(optionsRef.current, { opacity: 0, y: 20, duration: 0.5 }, "-=0.3");
+      
+      return () => {
+        tl.kill();
+      };
+    }
+  }, [isPageMounted]);
+  
+  // Función para agregar al carrito
+  const handleAddToCart = () => {
+    console.log('Producto personalizado agregado al carrito:', formValues);
+    
+    // Animar la previsualización al agregar al carrito
+    if (previewRef.current) {
+      gsap.to(previewRef.current, {
+        scale: 1.02,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1
+      });
+    }
+    
+    // Aquí podrías añadir lógica para guardar en el carrito
+    // Por ejemplo, usando localStorage o una API
+  };
+  
+  // Solución para problemas de hidratación
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // Obtener la ruta de la imagen de la polera según la vista seleccionada
+  const getTshirtImagePath = () => {
+    const viewMap = {
+      'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
+      'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
+      'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
+      'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
+    };
+    
+    return viewMap[formValues.view] || viewMap['front'];
+  };
+  
+  if (!isMounted) {
+    return (
+      <div className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className={`text-4xl md:text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+              Personaliza tu Polera
+            </h1>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
+              Cargando opciones de personalización...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Título y descripción */}
+        <div className="text-center mb-12">
+          <Text variant="h1" className={`text-4xl md:text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+            Personaliza tu Polera
+          </Text>
+          <Text variant="body" className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
+            Crea una polera única con tu diseño personalizado. Elige el color, añade texto o sube una imagen.
+          </Text>
+        </div>
+        
+        <FormProvider {...methods}>
+          <form className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Previsualización */}
+            <div className="order-2 lg:order-1">
+              <Card className="p-6 border rounded-xl shadow-lg">
+                <div className="rounded-xl overflow-hidden mb-6">
+                  <Text variant="h2" className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+                    Previsualización
+                  </Text>
+                
+                  <div ref={previewRef} className="relative aspect-[3/4] w-full max-w-xl mx-auto mb-6 rounded-lg overflow-hidden shadow-lg border border-gray-200">
+                    {/* Selector de vistas */}
+                    <div className="flex justify-center space-x-2 my-4">
+                      {tshirtViews.map((view) => (
+                        <button
+                          key={view.id}
+                          type="button"
+                          className={getViewButtonClass(formValues.view === view.id)}
+                          onClick={() => setValue('view', view.id as 'front' | 'back' | 'left' | 'right')}
+                        >
+                          {view.label}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Canvas para la personalización */}
+                    <HTMLCanvasV2
+                      tshirtImage={getTshirtImagePath()}
+                      customImage={currentViewData.image}
+                      customText={currentViewData.text || ''}
+                      textColor={currentViewData.textColor}
+                      textFont={selectedFont}
+                      textSize={currentViewData.textSize}
+                      imageWidth={currentViewData.imageWidth}
+                      imageHeight={currentViewData.imageHeight}
+                      textPositionX={currentViewData.textPositionX}
+                      textPositionY={currentViewData.textPositionY}
+                      imagePositionX={currentViewData.imagePositionX}
+                      imagePositionY={currentViewData.imagePositionY}
+                      onUpdateTextPosition={handleUpdateTextPosition}
+                      onUpdateImagePosition={handleUpdateImagePosition}
+                      onUpdateTextSize={handleUpdateTextSize}
+                      onUpdateImageSize={handleUpdateImageSize}
+                    />
+                  </div>
+                  
+                  {/* Precio y botón de añadir al carrito */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center">
+                    <div className="mb-4 sm:mb-0">
+                      <Text variant="h3" className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Precio Total: {formatPrice(totalPrice)}
+                      </Text>
+                      <Text variant="body" className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Incluye personalización y envío
+                      </Text>
+                    </div>
+                    <Button 
+                      variant="primary" 
+                      size="lg"
+                      onClick={handleAddToCart}
+                    >
+                      Añadir al Carrito
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            
+            {/* Opciones de personalización */}
+            <div ref={optionsRef} className="order-1 lg:order-2">
+              <Card className="p-6 border rounded-xl shadow-lg">
+                {/* Selección de color */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Color de la Polera
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    {colorOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`w-10 h-10 rounded-full border-2 ${
+                          formValues.color === option.id 
+                            ? 'border-blue-600 ring-2 ring-blue-300' 
+                            : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: option.value }}
+                        onClick={() => setValue('color', option.id)}
+                        aria-label={`Color ${option.label}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Selección de talla */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Talla
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    {sizeOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={getSizeButtonClass(formValues.size === option.id)}
+                        onClick={() => setValue('size', option.id)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Texto personalizado para la vista actual */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Texto Personalizado ({tshirtViews.find(v => v.id === currentView)?.label})
+                  </Text>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Escribe tu texto personalizado"
+                      className={`w-full p-3 rounded-md border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'}`}
+                      value={currentViewData.text || ''}
+                      onChange={(e) => setValue(`${currentView}.text`, e.target.value)}
+                      disabled={!!currentViewData.image}
+                    />
+                    {currentViewData.image && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 rounded-md">
+                        <Text variant="body" className="text-white text-sm">
+                          Desactiva la imagen para usar texto
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Selección de fuente para la vista actual */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Fuente del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    {fontOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={getFontButtonClass(currentViewData.textFont === option.value)}
+                        onClick={() => setValue(`${currentView}.textFont`, option.value)}
+                        disabled={!!currentViewData.image || !currentViewData.text}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Selección de color del texto para la vista actual */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Color del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    {textColorOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                        style={{ backgroundColor: option.value }}
+                        onClick={() => setValue(`${currentView}.textColor`, option.value)}
+                        disabled={!!currentViewData.image || !currentViewData.text}
+                      >
+                        {currentViewData.textColor === option.value && (
+                          <span className="text-white text-xs">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Subida de imagen para la vista actual */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Imagen Personalizada ({tshirtViews.find(v => v.id === currentView)?.label})
+                  </Text>
+                  {!currentViewData.image ? (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md p-6 text-center">
+                      <input
+                        type="file"
+                        id="image-upload"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={!!currentViewData.text}
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className={`cursor-pointer inline-block px-4 py-2 rounded-md bg-blue-600 text-white ${currentViewData.text ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        Subir Imagen
+                      </label>
+                      {currentViewData.text && (
+                        <Text variant="body" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          Elimina el texto para subir una imagen
+                        </Text>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="relative border rounded-md overflow-hidden">
+                      {currentViewData.image && (
+                        <>
+                          <Image
+                            src={currentViewData.image}
+                            alt="Imagen personalizada"
+                            width={300}
+                            height={200}
+                            className="w-full h-auto max-h-48 object-contain"
+                          />
+                          <button
+                            type="button"
+                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1"
+                            onClick={handleRemoveImage}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          <div className="mt-2 p-2 text-center bg-gray-100 dark:bg-gray-800">
+                            <Text variant="body" className="text-sm text-gray-600 dark:text-gray-300">
+                              Puedes arrastrar y redimensionar la imagen en la previsualización
+                            </Text>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Detalles adicionales */}
+                <div className="mb-6">
+                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    Detalles Adicionales
+                  </Text>
+                  <textarea
+                    className={`w-full p-3 rounded-md border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'} min-h-[100px]`}
+                    placeholder="Añade cualquier detalle adicional sobre tu pedido"
+                    {...register('details')}
+                  />
+                </div>
+              </Card>
+            </div>
+          </form>
+        </FormProvider>
+      </div>
+    </div>
+  );
+};
+
+export default CustomizeHTML;
