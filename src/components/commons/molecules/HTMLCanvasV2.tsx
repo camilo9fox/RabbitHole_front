@@ -153,7 +153,6 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     return null;
   }, [userImg, imagePosition, imageSize]);
 
-  // Efecto para dibujar en el canvas
   // Función para dibujar en el canvas
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -168,7 +167,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     // Dibujar la imagen de la polera
     if (tshirtImg) {
       // Verificar si es una imagen de polera negra (contiene 'black-tshirt' en la ruta)
-      const isBlackTshirt = tshirtImg.src.includes('black-tshirt');
+      const isBlackTshirt = tshirtImage.includes('black-tshirt');
       
       // Si no es una polera negra y se debe colorizar
       if (!isBlackTshirt && useColorization && tshirtColor !== '#FFFFFF') {
@@ -319,7 +318,14 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
       
       ctx.restore();
     }
-  }, [tshirtImg, tshirtColor, useColorization, userImg, imagePosition, imageSize, textPosition, textSize, textFont, textColor, customText, isDragging, dragTarget, isResizing]);
+  }, [tshirtImg, tshirtImage, tshirtColor, useColorization, userImg, imagePosition, imageSize, textPosition, textSize, textFont, textColor, customText, isDragging, dragTarget, isResizing]);
+
+  // Efecto para dibujar en el canvas cuando cambia la imagen de la polera
+  useEffect(() => {
+    if (tshirtImg) {
+      drawCanvas();
+    }
+  }, [tshirtImg, tshirtImage, drawCanvas]);
 
   // Función para manejar el movimiento del mouse
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
