@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+
+// Definir la interfaz para las referencias imperativas
+export interface HTMLCanvasHandle {
+  captureCanvas: () => string | undefined;
+}
 
 interface HTMLCanvasProps {
   tshirtImage: string;
@@ -35,7 +40,7 @@ interface Size {
 const HANDLE_SIZE = 10;
 const HANDLE_POSITIONS = ['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'];
 
-const HTMLCanvasV2: React.FC<HTMLCanvasProps> = ({
+const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({ 
   tshirtImage,
   customImage,
   customText = '',
@@ -52,8 +57,10 @@ const HTMLCanvasV2: React.FC<HTMLCanvasProps> = ({
   onUpdateImagePosition,
   onUpdateTextSize,
   onUpdateImageSize
-}) => {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Nota: La implementación de captureCanvas y useImperativeHandle está más abajo en el componente
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [tshirtImg, setTshirtImg] = useState<HTMLImageElement | null>(null);
@@ -540,33 +547,38 @@ const HTMLCanvasV2: React.FC<HTMLCanvasProps> = ({
   useEffect(() => {
     setImagePosition({ x: imagePositionX, y: imagePositionY });
   }, [imagePositionX, imagePositionY]);
-  
   useEffect(() => {
     setImageSize({ width: imageWidth, height: imageHeight });
   }, [imageWidth, imageHeight]);
-  
-  // Ajustar el tamaño del canvas al tamaño de la ventana
+
+  // Función para capturar el canvas como imagen base64
+  const captureCanvas = useCallback(() => {
+    if (!canvasRef.current) return undefined;
+    const dataUrl = canvasRef.current.toDataURL('image/png');
+    return dataUrl;
+  }, [canvasRef]);
+
+  // Exponer la función de captura a través de la ref
+  useImperativeHandle(ref, () => ({
+    captureCanvas
+  }), [captureCanvas]);
+
+  // Efecto para el redimensionamiento de la ventana
   useEffect(() => {
     const handleResize = () => {
-      if (containerRef.current) {
-        const width = Math.min(containerRef.current.offsetWidth, 500);
-        const height = width * 1.2; // Mantener proporción
-        setCanvasSize({ width, height });
-        
-        // Ajustar el tamaño del canvas
-        if (canvasRef.current) {
-          canvasRef.current.width = width;
-          canvasRef.current.height = height;
-        }
-      }
+      if (!containerRef.current) return;
+
+      const containerWidth = containerRef.current.clientWidth;
+      const newWidth = Math.min(500, containerWidth - 20); // 20px de margen
+      const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
+
+      setCanvasSize({ width: newWidth, height: newHeight });
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // Redibujar el canvas cuando cambien las propiedades
   useEffect(() => {
     if (canvasRef.current) {
       drawCanvas();
@@ -594,6 +606,9 @@ const HTMLCanvasV2: React.FC<HTMLCanvasProps> = ({
       )}
     </div>
   );
-};
+});
+
+// Asignar un displayName para las herramientas de desarrollo
+HTMLCanvasV2.displayName = 'HTMLCanvasV2';
 
 export default HTMLCanvasV2;

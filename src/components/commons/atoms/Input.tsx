@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { forwardRef, InputHTMLAttributes, ReactNode } from 'react';
 import { useController } from 'react-hook-form';
+import { useTheme } from 'next-themes';
 
 type InputElement = HTMLInputElement | HTMLSelectElement;
 
@@ -39,7 +40,7 @@ const Input = forwardRef<HTMLInputElement | HTMLSelectElement, InputProps>(
       rules,
     });
 
-    const baseStyles = 'w-full rounded-lg border border-white/10 bg-transparent px-4 py-3 text-white placeholder:text-white/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200';
+    const baseStyles = 'w-full rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-transparent px-4 py-3 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-white/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200';
 
     const renderInput = () => {
       if (props.as === 'select') {
@@ -68,10 +69,14 @@ const Input = forwardRef<HTMLInputElement | HTMLSelectElement, InputProps>(
       );
     };
 
+    // Usar useTheme para obtener el tema actual
+    const { resolvedTheme } = useTheme();
+    const isDarkMode = resolvedTheme === 'dark';
+    
     return (
       <div className="space-y-2">
         {label && (
-          <label htmlFor={name} className="text-sm text-white/80">
+          <label htmlFor={name} className={`text-sm ${isDarkMode ? 'text-white/90' : 'text-gray-700'}`}>
             {label}
           </label>
         )}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import AuthProvider from "@/components/providers/AuthProvider";
 import Layout from "@/components/layouts/Layout";
+import { CartProvider } from "@/context/CartContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,9 +34,11 @@ export default function RootLayout({
       <body className={`${inter.variable} ${poppins.variable} font-sans antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <ThemeProvider>
-            <Layout>
-              {children}
-            </Layout>
+            <CartProvider>
+              <Layout>
+                {children}
+              </Layout>
+            </CartProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

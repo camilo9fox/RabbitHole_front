@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useCart } from '@/context/CartContext';
+import { CustomDesignStatus } from '@/types/cart';
 import { useTheme } from 'next-themes';
 import Text from '@/components/commons/atoms/Text';
 import Button from '@/components/commons/atoms/Button';
 import Card from '@/components/commons/atoms/Card';
-import HTMLCanvasV2 from '@/components/commons/molecules/HTMLCanvasV2';
+import HTMLCanvasV2, { HTMLCanvasHandle } from '@/components/commons/molecules/HTMLCanvasV2';
 import { useForm, FormProvider } from 'react-hook-form';
 import gsap from 'gsap';
 import Image from 'next/image';
@@ -119,6 +121,15 @@ const CustomizeHTML = () => {
   // Referencias para animaciones
   const previewRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
+  
+  // Referencias para los canvas de cada vista
+  const frontCanvasRef = useRef<HTMLCanvasHandle>(null);
+  const backCanvasRef = useRef<HTMLCanvasHandle>(null);
+  const leftCanvasRef = useRef<HTMLCanvasHandle>(null);
+  const rightCanvasRef = useRef<HTMLCanvasHandle>(null);
+  
+  // Contexto del carrito
+  const { addCustomItem } = useCart();
   
   // Estados
   const [isPageMounted, setIsPageMounted] = useState(false);
@@ -346,7 +357,8 @@ const CustomizeHTML = () => {
   
   // Función para agregar al carrito
   const handleAddToCart = () => {
-    console.log('Producto personalizado agregado al carrito:', formValues);
+    // Guardar la vista actual para volver a ella
+    const currentViewValue = formValues.view;
     
     // Animar la previsualización al agregar al carrito
     if (previewRef.current) {
@@ -358,8 +370,121 @@ const CustomizeHTML = () => {
       });
     }
     
-    // Aquí podrías añadir lógica para guardar en el carrito
-    // Por ejemplo, usando localStorage o una API
+    // Cambiar a cada vista para capturar las imágenes
+    // Primero capturamos la vista actual
+    let frontImage: string | undefined, backImage: string | undefined, leftImage: string | undefined, rightImage: string | undefined;
+    
+    // Capturar las imágenes de cada vista
+    // Nota: Esto funciona porque React renderiza inmediatamente al cambiar el estado
+    // y nuestros refs están configurados para cada vista
+    
+    // Capturar vista frontal
+    setValue('view', 'front');
+    // Esperar a que se renderice
+    setTimeout(() => {
+      frontImage = frontCanvasRef.current?.captureCanvas();
+      
+      // Capturar vista trasera
+      setValue('view', 'back');
+      setTimeout(() => {
+        backImage = backCanvasRef.current?.captureCanvas();
+        
+        // Capturar vista izquierda
+        setValue('view', 'left');
+        setTimeout(() => {
+          leftImage = leftCanvasRef.current?.captureCanvas();
+          
+          // Capturar vista derecha
+          setValue('view', 'right');
+          setTimeout(() => {
+            rightImage = rightCanvasRef.current?.captureCanvas();
+            
+            // Volver a la vista original
+            setValue('view', currentViewValue);
+            
+            // Crear el objeto de diseño personalizado
+            const customDesign = {
+              id: `custom-${Date.now()}`,
+              name: 'Polera Personalizada',
+              price: totalPrice,
+              quantity: 1,
+              color: selectedColorOption.label,
+              size: selectedSizeOption.label,
+              status: CustomDesignStatus.PENDING, // Estado inicial: pendiente de aprobación
+              front: {
+                text: formValues.front.text || '',
+                image: formValues.front.image,
+                textFont: selectedFont,
+                textColor: formValues.front.textColor,
+                textSize: formValues.front.textSize,
+                textPositionX: formValues.front.textPositionX,
+                textPositionY: formValues.front.textPositionY,
+                imagePositionX: formValues.front.imagePositionX,
+                imagePositionY: formValues.front.imagePositionY,
+                imageWidth: formValues.front.imageWidth,
+                imageHeight: formValues.front.imageHeight,
+                previewImage: frontImage
+              },
+              back: {
+                text: formValues.back.text || '',
+                image: formValues.back.image,
+                textFont: selectedFont,
+                textColor: formValues.back.textColor,
+                textSize: formValues.back.textSize,
+                textPositionX: formValues.back.textPositionX,
+                textPositionY: formValues.back.textPositionY,
+                imagePositionX: formValues.back.imagePositionX,
+                imagePositionY: formValues.back.imagePositionY,
+                imageWidth: formValues.back.imageWidth,
+                imageHeight: formValues.back.imageHeight,
+                previewImage: backImage
+              },
+              left: {
+                text: formValues.left.text || '',
+                image: formValues.left.image,
+                textFont: selectedFont,
+                textColor: formValues.left.textColor,
+                textSize: formValues.left.textSize,
+                textPositionX: formValues.left.textPositionX,
+                textPositionY: formValues.left.textPositionY,
+                imagePositionX: formValues.left.imagePositionX,
+                imagePositionY: formValues.left.imagePositionY,
+                imageWidth: formValues.left.imageWidth,
+                imageHeight: formValues.left.imageHeight,
+                previewImage: leftImage
+              },
+              right: {
+                text: formValues.right.text || '',
+                image: formValues.right.image,
+                textFont: selectedFont,
+                textColor: formValues.right.textColor,
+                textSize: formValues.right.textSize,
+                textPositionX: formValues.right.textPositionX,
+                textPositionY: formValues.right.textPositionY,
+                imagePositionX: formValues.right.imagePositionX,
+                imagePositionY: formValues.right.imagePositionY,
+                imageWidth: formValues.right.imageWidth,
+                imageHeight: formValues.right.imageHeight,
+                previewImage: rightImage
+              },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            
+            // Añadir al carrito
+            addCustomItem(customDesign, 1);
+            
+            // Mostrar mensaje de éxito
+            alert('¡Diseño personalizado añadido al carrito!');
+            
+            // Opcional: redirigir al carrito o a otra página
+            // router.push('/cart');
+            
+            console.log('Producto personalizado agregado al carrito:', customDesign);
+          }, 100);
+        }, 100);
+      }, 100);
+    }, 100);
   };
   
   // Solución para problemas de hidratación
@@ -440,24 +565,90 @@ const CustomizeHTML = () => {
                     </div>
                     
                     {/* Canvas para la personalización */}
-                    <HTMLCanvasV2
-                      tshirtImage={getTshirtImagePath()}
-                      customImage={currentViewData.image}
-                      customText={currentViewData.text || ''}
-                      textColor={currentViewData.textColor}
-                      textFont={selectedFont}
-                      textSize={currentViewData.textSize}
-                      imageWidth={currentViewData.imageWidth}
-                      imageHeight={currentViewData.imageHeight}
-                      textPositionX={currentViewData.textPositionX}
-                      textPositionY={currentViewData.textPositionY}
-                      imagePositionX={currentViewData.imagePositionX}
-                      imagePositionY={currentViewData.imagePositionY}
-                      onUpdateTextPosition={handleUpdateTextPosition}
-                      onUpdateImagePosition={handleUpdateImagePosition}
-                      onUpdateTextSize={handleUpdateTextSize}
-                      onUpdateImageSize={handleUpdateImageSize}
-                    />
+                    {formValues.view === 'front' && (
+                      <HTMLCanvasV2
+                        ref={frontCanvasRef}
+                        tshirtImage={getTshirtImagePath()}
+                        customImage={currentViewData.image}
+                        customText={currentViewData.text || ''}
+                        textColor={currentViewData.textColor}
+                        textFont={selectedFont}
+                        textSize={currentViewData.textSize}
+                        imageWidth={currentViewData.imageWidth}
+                        imageHeight={currentViewData.imageHeight}
+                        textPositionX={currentViewData.textPositionX}
+                        textPositionY={currentViewData.textPositionY}
+                        imagePositionX={currentViewData.imagePositionX}
+                        imagePositionY={currentViewData.imagePositionY}
+                        onUpdateTextPosition={handleUpdateTextPosition}
+                        onUpdateImagePosition={handleUpdateImagePosition}
+                        onUpdateTextSize={handleUpdateTextSize}
+                        onUpdateImageSize={handleUpdateImageSize}
+                      />
+                    )}
+                    {formValues.view === 'back' && (
+                      <HTMLCanvasV2
+                        ref={backCanvasRef}
+                        tshirtImage={getTshirtImagePath()}
+                        customImage={currentViewData.image}
+                        customText={currentViewData.text || ''}
+                        textColor={currentViewData.textColor}
+                        textFont={selectedFont}
+                        textSize={currentViewData.textSize}
+                        imageWidth={currentViewData.imageWidth}
+                        imageHeight={currentViewData.imageHeight}
+                        textPositionX={currentViewData.textPositionX}
+                        textPositionY={currentViewData.textPositionY}
+                        imagePositionX={currentViewData.imagePositionX}
+                        imagePositionY={currentViewData.imagePositionY}
+                        onUpdateTextPosition={handleUpdateTextPosition}
+                        onUpdateImagePosition={handleUpdateImagePosition}
+                        onUpdateTextSize={handleUpdateTextSize}
+                        onUpdateImageSize={handleUpdateImageSize}
+                      />
+                    )}
+                    {formValues.view === 'left' && (
+                      <HTMLCanvasV2
+                        ref={leftCanvasRef}
+                        tshirtImage={getTshirtImagePath()}
+                        customImage={currentViewData.image}
+                        customText={currentViewData.text || ''}
+                        textColor={currentViewData.textColor}
+                        textFont={selectedFont}
+                        textSize={currentViewData.textSize}
+                        imageWidth={currentViewData.imageWidth}
+                        imageHeight={currentViewData.imageHeight}
+                        textPositionX={currentViewData.textPositionX}
+                        textPositionY={currentViewData.textPositionY}
+                        imagePositionX={currentViewData.imagePositionX}
+                        imagePositionY={currentViewData.imagePositionY}
+                        onUpdateTextPosition={handleUpdateTextPosition}
+                        onUpdateImagePosition={handleUpdateImagePosition}
+                        onUpdateTextSize={handleUpdateTextSize}
+                        onUpdateImageSize={handleUpdateImageSize}
+                      />
+                    )}
+                    {formValues.view === 'right' && (
+                      <HTMLCanvasV2
+                        ref={rightCanvasRef}
+                        tshirtImage={getTshirtImagePath()}
+                        customImage={currentViewData.image}
+                        customText={currentViewData.text || ''}
+                        textColor={currentViewData.textColor}
+                        textFont={selectedFont}
+                        textSize={currentViewData.textSize}
+                        imageWidth={currentViewData.imageWidth}
+                        imageHeight={currentViewData.imageHeight}
+                        textPositionX={currentViewData.textPositionX}
+                        textPositionY={currentViewData.textPositionY}
+                        imagePositionX={currentViewData.imagePositionX}
+                        imagePositionY={currentViewData.imagePositionY}
+                        onUpdateTextPosition={handleUpdateTextPosition}
+                        onUpdateImagePosition={handleUpdateImagePosition}
+                        onUpdateTextSize={handleUpdateTextSize}
+                        onUpdateImageSize={handleUpdateImageSize}
+                      />
+                    )}
                   </div>
                   
                   {/* Precio y botón de añadir al carrito */}
@@ -662,6 +853,20 @@ const CustomizeHTML = () => {
                     placeholder="Añade cualquier detalle adicional sobre tu pedido"
                     {...register('details')}
                   />
+                </div>
+                
+                {/* Botón de Agregar al Carrito */}
+                <div className="mt-8">
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                    </svg>
+                    Agregar al Carrito
+                  </button>
                 </div>
               </Card>
             </div>

@@ -8,6 +8,8 @@ import ThemeToggle from '../molecules/ThemeToggle';
 import AuthNav from '../molecules/AuthNav';
 import Logo from '../atoms/Logo';
 import { useTheme } from 'next-themes';
+import CartDrawer from './CartDrawer';
+import { useCart } from '@/context/CartContext';
 
 const navigation = [
   { name: 'Inicio', href: '/' },
@@ -19,7 +21,9 @@ const navigation = [
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const { resolvedTheme } = useTheme();
+  const { cart } = useCart();
   const navLinksRef = useRef<HTMLDivElement>(null);
   const navItemsRef = useRef<(HTMLAnchorElement | null)[]>([]);
   
@@ -120,25 +124,26 @@ const Navbar = () => {
   // Si no estamos montados en el cliente, renderizamos un placeholder para evitar errores de hidratación
   if (!mounted) {
     return (
-      <nav className="fixed w-full z-50 transition-all duration-300 shadow-lg" suppressHydrationWarning>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 shadow-sm">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Top">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               {/* Placeholder */}
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      </header>
     );
   }
 
   const isDarkMode = resolvedTheme === 'dark';
 
   return (
-    <nav 
-      className={`fixed w-full z-50 transition-all duration-300 shadow-lg ${isDarkMode ? 'bg-black' : 'bg-white'}`}
-      suppressHydrationWarning
-    >
+    <>
+      <nav 
+        className={`fixed w-full z-50 transition-all duration-300 shadow-lg ${isDarkMode ? 'bg-black' : 'bg-white'}`}
+        suppressHydrationWarning
+      >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -165,19 +170,29 @@ const Navbar = () => {
           </div>
 
           {/* Actions */}
-          <div className="hidden sm:flex items-center space-x-5">
-            <ThemeToggle />
-            <button className={`${isDarkMode ? 'text-white' : 'text-black'}`}>
-              <Search className="h-5 w-5" aria-hidden="true" />
+          <div className="hidden sm:flex items-center space-x-4">
+            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <Search className="h-5 w-5 text-gray-800 dark:text-gray-300" />
             </button>
-            <Link href="/favorites" className={`${isDarkMode ? 'text-white' : 'text-black'} relative`}>
-              <Heart className="h-5 w-5" aria-hidden="true" />
-              <span className="absolute -top-2 -right-2 bg-accent text-primary text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">2</span>
-            </Link>
-            <Link href="/cart" className={`${isDarkMode ? 'text-white' : 'text-black'} relative`}>
-              <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-              <span className="absolute -top-2 -right-2 bg-accent text-primary text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">3</span>
-            </Link>
+            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <Heart className="h-5 w-5 text-gray-800 dark:text-gray-300" />
+            </button>
+            <button 
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative"
+              onClick={() => {
+                console.log('Clic en icono de carrito');
+                setIsCartOpen(true);
+              }}
+              aria-label="Abrir carrito de compras"
+            >
+              <ShoppingCart className="h-5 w-5 text-gray-800 dark:text-gray-300" />
+              {cart.totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cart.totalItems}
+                </span>
+              )}
+            </button>
+            <ThemeToggle />
             <AuthNav />
           </div>
 
@@ -242,6 +257,10 @@ const Navbar = () => {
         </div>
       )}
     </nav>
+
+    {/* Cart Drawer - Siempre renderizado, pero solo visible cuando isCartOpen es true */}
+    <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+    </>
   );
 };
 
