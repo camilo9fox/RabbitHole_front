@@ -27,6 +27,9 @@ export interface CustomView {
 // Diseño personalizado completo
 export interface CustomDesign {
   id?: string;
+  name?: string;
+  price: number;
+  quantity?: number;
   front: CustomView;
   back: CustomView;
   left: CustomView;

@@ -73,7 +73,7 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
     
     case 'ADD_CUSTOM_ITEM': {
       const { design, quantity } = action;
-      const price = 29.99; // Precio base para diseños personalizados
+      const price = design.price; // Usamos el precio del diseño personalizado
       
       // Los diseños personalizados siempre se agregan como nuevos items
       const newItem: CartItem = {

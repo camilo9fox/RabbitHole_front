@@ -46,7 +46,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       currency: 'CLP',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(price * 1000); // Multiplicamos por 1000 para mostrar en pesos chilenos
+    }).format(price); // Los precios ya están en pesos chilenos completos
   };
 
   // Animación de apertura/cierre del drawer

@@ -25,13 +25,14 @@ const Input = ({ label, type = 'text', ...props }: { label: string; type?: strin
   );
 };
 
-
-
 const CheckoutPage: React.FC = () => {
   const { cart, removeItem } = useCart();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   const [step, setStep] = useState(1);
+  
+  // Estado para controlar qué vista se muestra para cada ítem personalizado
+  const [activeViews, setActiveViews] = useState<Record<string, string>>({});
   
   // Log the current theme for debugging
   useEffect(() => {
@@ -68,12 +69,13 @@ const CheckoutPage: React.FC = () => {
 
   // Formatear precio en CLP
   const formatPrice = (price: number) => {
-    // Multiplicamos por 1000 para convertir de la unidad de almacenamiento (miles) a la unidad de visualización (pesos)
+    // Los precios ya están en pesos chilenos completos
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP',
-      minimumFractionDigits: 0
-    }).format(price * 1000);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -132,10 +134,17 @@ const CheckoutPage: React.FC = () => {
             price = item.product.price;
             details = `${item.product.color} / Talla ${item.product.size.toUpperCase()}`;
           } else if (item.type === CartItemType.CUSTOM && 'design' in item) {
-            image = item.design.front.image ?? '/assets/products/placeholder.png';
-            name = 'Diseño Personalizado';
-            // Calculamos el precio base para diseños personalizados
-            price = 15000; // Precio base para poleras personalizadas
+            // Obtener la vista activa o usar 'front' por defecto
+            const itemKey = `custom-${item.design.id}`;
+            const activeView = activeViews[itemKey] || 'front';
+            
+            // Obtener la imagen de la vista activa
+            const viewData = item.design[activeView as 'front' | 'back' | 'left' | 'right'];
+            image = viewData?.previewImage ?? viewData?.image ?? '/assets/products/placeholder.png';
+            
+            name = 'Polera Personalizada';
+            // Usar el precio real del diseño personalizado
+            price = item.price;
             details = `${item.design.color} / Talla ${item.design.size.toUpperCase()}`;
             
             if (item.design.status === 'pending') {
@@ -153,29 +162,61 @@ const CheckoutPage: React.FC = () => {
             : `custom-${item.design.id}`;
             
           return (
-            <li key={itemKey} className="py-4 flex overflow-hidden cart-item-container">
-              <div className={`h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border ${isDarkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-white'}`}>
-                <Image
-                  src={image}
-                  alt={name}
-                  width={80}
-                  height={80}
-                  className="h-full w-full object-cover object-center"
-                />
-              </div>
-              <div className="ml-4 flex flex-1 flex-col">
-                <div className={`flex justify-between text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} cart-item-title`}>
-                  <h3>{name}</h3>
-                  <p className="ml-4">{formatPrice(price * item.quantity)}</p>
+            <li key={itemKey} className="py-4 flex overflow-hidden cart-item-container w-full">
+              <div className="flex">
+                <div className={`h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border ${isDarkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-white'}`}>
+                  <Image
+                    src={image}
+                    alt={name}
+                    width={80}
+                    height={80}
+                    className="h-full w-full object-cover object-center"
+                  />
                 </div>
-                <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                
+                {/* Botones de navegación entre vistas para diseños personalizados */}
+                {item.type === CartItemType.CUSTOM && 'design' in item && (
+                  <div className="ml-2 flex flex-col justify-center">
+                    {Object.entries(item.design)
+                      .filter(([key, view]) => 
+                        ['front', 'back', 'left', 'right'].includes(key) && 
+                        (view as { previewImage?: string })?.previewImage
+                      )
+                      .map(([viewKey]) => {
+                        const isActive = activeViews[itemKey] === viewKey || (!activeViews[itemKey] && viewKey === 'front');
+                        let label = '';
+                        if (viewKey === 'front') label = 'F';
+                        else if (viewKey === 'back') label = 'E';
+                        else if (viewKey === 'left') label = 'I';
+                        else if (viewKey === 'right') label = 'D';
+                        
+                        return (
+                          <button
+                            key={viewKey}
+                            onClick={() => setActiveViews(prev => ({ ...prev, [itemKey]: viewKey }))}
+                            className={`my-0.5 px-1.5 py-0.5 text-xs rounded-md ${isActive ? 'bg-blue-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
+                            title={viewKey.charAt(0).toUpperCase() + viewKey.slice(1)}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+              <div className="ml-4 flex flex-1 flex-col overflow-hidden">
+                <div className={`flex justify-between text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} cart-item-title min-w-0`}>
+                  <h3 className="truncate pr-2 max-w-[60%]">{name}</h3>
+                  <p className="ml-2 flex-shrink-0 text-right">{formatPrice(price)}</p>
+                </div>
+                <p className={`mt-1 text-sm truncate ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {details}
                 </p>
-                <div className="flex items-end justify-between text-sm">
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Cant. {item.quantity}</p>
+                <div className="flex items-end justify-between text-sm w-full mt-1">
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} flex-shrink-0`}>Cant. {item.quantity}</p>
                   <button
                     type="button"
-                    className={`font-medium ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-500'}`}
+                    className={`font-medium whitespace-nowrap flex-shrink-0 ml-2 px-2 py-0.5 rounded ${isDarkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-900/20' : 'text-red-600 hover:text-red-500 hover:bg-red-50'}`}
                     onClick={() => removeItem(index)}
                   >
                     Eliminar
@@ -193,7 +234,7 @@ const CheckoutPage: React.FC = () => {
   const renderCartSummary = () => (
     <div className={`rounded-lg p-4 shadow-md cart-summary-container ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'}`}>
       <h2 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Resumen de la Orden</h2>
-      <div className="flow-root max-h-80 overflow-y-auto">
+      <div className="flow-root max-h-[400px] overflow-y-auto w-full pr-1">
         {renderCartItems()}
       </div>
       <div className={`border-t pt-4 mt-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
