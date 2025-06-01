@@ -162,8 +162,9 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Limpiar el canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Limpiar el canvas y dibujar un fondo gris para mejor contraste
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Dibujar la imagen de la polera
     if (tshirtImg) {
@@ -877,7 +878,8 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
             maxWidth: '100%',
             minWidth: '250px',
             display: 'block', // Asegura que el canvas siempre sea visible
-            touchAction: 'none' // Prevenir acciones táctiles predeterminadas del navegador
+            touchAction: 'none', // Prevenir acciones táctiles predeterminadas del navegador
+            backgroundColor: '#f0f0f0' // Fondo gris para mejor contraste
           }}
         />
       </div>
