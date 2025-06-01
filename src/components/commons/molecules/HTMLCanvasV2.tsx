@@ -164,6 +164,10 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     // Limpiar el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Dibujar un fondo gris claro
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     // Dibujar la imagen de la polera
     if (tshirtImg) {
       // Verificar si es una imagen de polera negra (contiene 'black-tshirt' en la ruta)
@@ -631,22 +635,64 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     captureCanvas
   }), [captureCanvas]);
 
-  // Efecto para el redimensionamiento de la ventana
+  // Efecto para el redimensionamiento de la ventana y cambios de orientación
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current) return;
 
-      const containerWidth = containerRef.current.clientWidth;
-      const newWidth = Math.min(500, containerWidth - 20); // 20px de margen
-      const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
+      // Usar requestAnimationFrame para asegurar que el cálculo se realice en el momento adecuado
+      requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        
+        const containerWidth = containerRef.current.clientWidth;
+        // Asegurar que el canvas tenga un tamaño mínimo de 250px para dispositivos móviles
+        // y se adapte al contenedor en pantallas más grandes
+        const newWidth = Math.max(250, Math.min(500, containerWidth - 20)); // 20px de margen
+        const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
 
-      setCanvasSize({ width: newWidth, height: newHeight });
+        setCanvasSize({ width: newWidth, height: newHeight });
+      });
+    };
+    
+    // Función para forzar el redibujado del canvas
+    const forceRedraw = () => {
+      if (canvasRef.current && tshirtImg) {
+        drawCanvas();
+      }
     };
 
+    // Llamar al resize inicialmente y forzar el redibujado
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    // Dar tiempo para que se carguen los recursos antes de dibujar
+    setTimeout(forceRedraw, 100);
+    
+    // Usar un throttle para el evento de resize para mejorar el rendimiento
+    let resizeTimeout: NodeJS.Timeout | null = null;
+    const throttledResize = () => {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        handleResize();
+        forceRedraw();
+      }, 100);
+    };
+    
+    // Manejar cambios de orientación en dispositivos móviles
+    const handleOrientationChange = () => {
+      // Dar tiempo para que el navegador actualice las dimensiones
+      setTimeout(() => {
+        handleResize();
+        forceRedraw();
+      }, 200);
+    };
+    
+    window.addEventListener('resize', throttledResize);
+    window.addEventListener('orientationchange', handleOrientationChange);
+    
+    return () => {
+      window.removeEventListener('resize', throttledResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, [drawCanvas, tshirtImg]);
   useEffect(() => {
     if (canvasRef.current) {
       drawCanvas();
@@ -654,19 +700,26 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   }, [drawCanvas]);
 
   return (
-    <div ref={containerRef} className="w-full relative flex flex-col items-center">
-      <canvas
-        ref={canvasRef}
-        width={canvasSize.width}
-        height={canvasSize.height}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        className="border border-gray-300 rounded-md"
-      />
+    <div ref={containerRef} className="w-full relative flex flex-col items-center overflow-hidden">
+      <div className="w-full flex justify-center overflow-visible px-2">
+        <canvas
+          ref={canvasRef}
+          width={canvasSize.width}
+          height={canvasSize.height}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          className="border border-gray-300 rounded-md shadow-sm"
+          style={{ 
+            maxWidth: '100%',
+            minWidth: '250px',
+            display: 'block' // Asegura que el canvas siempre sea visible
+          }}
+        />
+      </div>
       {customText && !userImg && (
         <div className="text-center mt-2 text-sm text-gray-500">
           Usa las teclas + y - para ajustar el tamaño del texto
