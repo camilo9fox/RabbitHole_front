@@ -542,15 +542,49 @@ const CustomizeHTML = () => {
     setIsMounted(true);
   }, []);
   
-  // Obtener la ruta de la imagen de la polera según la vista seleccionada
+  // Obtener la ruta de la imagen de la polera según la vista y el color seleccionado
   const getTshirtImagePath = () => {
-    const viewMap = {
-      'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
-      'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
-      'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
-      'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
+    // Obtener el color seleccionado
+    const selectedColor = formValues.color;
+    
+    // Mapeo de vistas para cada color
+    const colorViewMap: Record<string, Record<string, string>> = {
+      'white': {
+        'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
+        'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
+        'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
+        'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
+      },
+      'black': {
+        'front': '/assets/products/black-tshirt/black-tshirt-frente.png',
+        'back': '/assets/products/black-tshirt/black-tshirt-espalda.png',
+        'left': '/assets/products/black-tshirt/black-tshirt-izquierda.png',
+        'right': '/assets/products/black-tshirt/black-tshirt-derecha.png'
+      },
+      'gray': {
+        'front': '/assets/products/gray-tshirt/gray-tshirt-frente.png',
+        'back': '/assets/products/gray-tshirt/gray-tshirt-espalda.png',
+        'left': '/assets/products/gray-tshirt/gray-tshirt-izquierda.png',
+        'right': '/assets/products/gray-tshirt/gray-tshirt-derecha.png'
+      },
+      'blue': {
+        'front': '/assets/products/blue-tshirt/blue-tshirt-frente.png',
+        'back': '/assets/products/blue-tshirt/blue-tshirt-espalda.png',
+        'left': '/assets/products/blue-tshirt/blue-tshirt-izquierda.png',
+        'right': '/assets/products/blue-tshirt/blue-tshirt-derecha.png'
+      },
+      'red': {
+        'front': '/assets/products/red-tshirt/red-tshirt-frente.png',
+        'back': '/assets/products/red-tshirt/red-tshirt-espalda.png',
+        'left': '/assets/products/red-tshirt/red-tshirt-izquierda.png',
+        'right': '/assets/products/red-tshirt/red-tshirt-derecha.png'
+      }
     };
     
+    // Obtener el mapa de vistas para el color seleccionado o usar blanco como fallback
+    const viewMap = colorViewMap[selectedColor] || colorViewMap['white'];
+    
+    // Retornar la ruta de la imagen según la vista seleccionada
     return viewMap[formValues.view] || viewMap['front'];
   };
   
