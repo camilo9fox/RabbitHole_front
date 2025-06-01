@@ -9,6 +9,7 @@ export interface HTMLCanvasHandle {
 
 interface HTMLCanvasProps {
   tshirtImage: string;
+  tshirtColor?: string; // Color para aplicar a la polera
   customImage?: string | null;
   customText?: string;
   textColor?: string;
@@ -24,6 +25,7 @@ interface HTMLCanvasProps {
   onUpdateImagePosition?: (x: number, y: number) => void;
   onUpdateTextSize?: (size: number) => void;
   onUpdateImageSize?: (width: number, height: number) => void;
+  useColorization?: boolean; // Indica si se debe usar la coloración dinámica
 }
 
 interface Position {
@@ -42,6 +44,8 @@ const HANDLE_POSITIONS = ['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'];
 
 const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({ 
   tshirtImage,
+  tshirtColor = '#FFFFFF',
+  useColorization = false,
   customImage,
   customText = '',
   textColor = '#000000',
@@ -149,6 +153,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     return null;
   }, [userImg, imagePosition, imageSize]);
 
+  // Efecto para dibujar en el canvas
   // Función para dibujar en el canvas
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -162,7 +167,62 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     
     // Dibujar la imagen de la polera
     if (tshirtImg) {
-      ctx.drawImage(tshirtImg, 0, 0, canvas.width, canvas.height);
+      // Verificar si es una imagen de polera negra (contiene 'black-tshirt' en la ruta)
+      const isBlackTshirt = tshirtImg.src.includes('black-tshirt');
+      
+      // Si no es una polera negra y se debe colorizar
+      if (!isBlackTshirt && useColorization && tshirtColor !== '#FFFFFF') {
+        // Crear un canvas temporal para la coloración
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (tempCtx) {
+          // Dibujar la imagen base en el canvas temporal
+          tempCtx.drawImage(tshirtImg, 0, 0, canvas.width, canvas.height);
+          
+          // Obtener los datos de la imagen
+          const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          
+          // Convertir el color hex a RGB
+          const hexToRgb = (hex: string) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+          };
+          
+          const targetColor = hexToRgb(tshirtColor);
+          
+          // Colorear solo los píxeles no transparentes (la polera)
+          for (let i = 0; i < data.length; i += 4) {
+            // Si el píxel no es completamente transparente (es parte de la polera)
+            if (data[i + 3] > 0) {
+              // Obtener la luminosidad del píxel original (escala de grises)
+              const brightness = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+              
+              // Aplicar el color manteniendo las sombras y luces de la imagen original
+              data[i] = Math.floor(targetColor.r * brightness);
+              data[i + 1] = Math.floor(targetColor.g * brightness);
+              data[i + 2] = Math.floor(targetColor.b * brightness);
+            }
+          }
+          
+          // Poner los datos modificados de vuelta en el canvas temporal
+          tempCtx.putImageData(imageData, 0, 0);
+          
+          // Dibujar el canvas temporal en el canvas principal
+          ctx.drawImage(tempCanvas, 0, 0);
+        } else {
+          // Si no se puede crear el contexto temporal, usar el método anterior
+          ctx.drawImage(tshirtImg, 0, 0, canvas.width, canvas.height);
+        }
+      } else {
+        // Si es una polera negra o no se usa colorización, simplemente dibujar la imagen de la polera
+        ctx.drawImage(tshirtImg, 0, 0, canvas.width, canvas.height);
+      }
     }
     
     // Dibujar la imagen personalizada
@@ -259,7 +319,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
       
       ctx.restore();
     }
-  }, [tshirtImg, userImg, customText, textColor, textFont, textSize, textPosition, imagePosition, imageSize, isDragging, isResizing, dragTarget]);
+  }, [tshirtImg, tshirtColor, useColorization, userImg, imagePosition, imageSize, textPosition, textSize, textFont, textColor, customText, isDragging, dragTarget, isResizing]);
 
   // Función para manejar el movimiento del mouse
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -528,6 +588,8 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
       };
     }
     
+    // No se requiere máscara para la coloración simplificada
+    
     if (customImage) {
       const img = new Image();
       img.src = customImage;
@@ -537,7 +599,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     } else {
       setUserImg(null);
     }
-  }, [tshirtImage, customImage]);
+  }, [tshirtImage, customImage, useColorization]);
   
   // Actualizar posiciones y tamaños cuando cambian las props
   useEffect(() => {

@@ -52,7 +52,7 @@ const colorOptions = [
   { 
     id: 'black', 
     label: 'Negro', 
-    value: '#000000', 
+    value: '#1A1A1A', 
     textPreview: '#FFFFFF',
     priceModifier: 0 // Sin costo adicional
   },
@@ -66,8 +66,22 @@ const colorOptions = [
   { 
     id: 'blue', 
     label: 'Azul', 
-    value: '#0000FF', 
+    value: '#0047AB', 
     textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'navy', 
+    label: 'Azul Marino', 
+    value: '#000080', 
+    textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'lightblue', 
+    label: 'Azul Claro', 
+    value: '#ADD8E6', 
+    textPreview: '#000000',
     priceModifier: 500 // 500 pesos adicionales
   },
   { 
@@ -75,6 +89,62 @@ const colorOptions = [
     label: 'Rojo', 
     value: '#FF0000', 
     textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'burgundy', 
+    label: 'Borgoña', 
+    value: '#800020', 
+    textPreview: '#FFFFFF',
+    priceModifier: 700 // 700 pesos adicionales
+  },
+  { 
+    id: 'pink', 
+    label: 'Rosa', 
+    value: '#FFC0CB', 
+    textPreview: '#000000',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'green', 
+    label: 'Verde', 
+    value: '#008000', 
+    textPreview: '#FFFFFF',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'olive', 
+    label: 'Verde Oliva', 
+    value: '#808000', 
+    textPreview: '#FFFFFF',
+    priceModifier: 700 // 700 pesos adicionales
+  },
+  { 
+    id: 'mint', 
+    label: 'Menta', 
+    value: '#98FF98', 
+    textPreview: '#000000',
+    priceModifier: 700 // 700 pesos adicionales
+  },
+  { 
+    id: 'purple', 
+    label: 'Púrpura', 
+    value: '#800080', 
+    textPreview: '#FFFFFF',
+    priceModifier: 700 // 700 pesos adicionales
+  },
+  { 
+    id: 'yellow', 
+    label: 'Amarillo', 
+    value: '#FFFF00', 
+    textPreview: '#000000',
+    priceModifier: 500 // 500 pesos adicionales
+  },
+  { 
+    id: 'orange', 
+    label: 'Naranja', 
+    value: '#FFA500', 
+    textPreview: '#000000',
     priceModifier: 500 // 500 pesos adicionales
   }
 ];
@@ -542,50 +612,39 @@ const CustomizeHTML = () => {
     setIsMounted(true);
   }, []);
   
-  // Obtener la ruta de la imagen de la polera según la vista y el color seleccionado
+  // Obtener la ruta de la imagen de la polera según la vista seleccionada y el color
   const getTshirtImagePath = () => {
-    // Obtener el color seleccionado
-    const selectedColor = formValues.color;
-    
-    // Mapeo de vistas para cada color
-    const colorViewMap: Record<string, Record<string, string>> = {
-      'white': {
-        'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
-        'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
-        'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
-        'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
-      },
-      'black': {
+    // Si el color seleccionado es negro, usar la imagen de polera negra
+    if (formValues.color === 'black') {
+      // Mapeo de vistas para la polera negra
+      const blackTshirtViewMap: Record<string, string> = {
         'front': '/assets/products/black-tshirt/black-tshirt-frente.png',
         'back': '/assets/products/black-tshirt/black-tshirt-espalda.png',
         'left': '/assets/products/black-tshirt/black-tshirt-izquierda.png',
         'right': '/assets/products/black-tshirt/black-tshirt-derecha.png'
-      },
-      'gray': {
-        'front': '/assets/products/gray-tshirt/gray-tshirt-frente.png',
-        'back': '/assets/products/gray-tshirt/gray-tshirt-espalda.png',
-        'left': '/assets/products/gray-tshirt/gray-tshirt-izquierda.png',
-        'right': '/assets/products/gray-tshirt/gray-tshirt-derecha.png'
-      },
-      'blue': {
-        'front': '/assets/products/blue-tshirt/blue-tshirt-frente.png',
-        'back': '/assets/products/blue-tshirt/blue-tshirt-espalda.png',
-        'left': '/assets/products/blue-tshirt/blue-tshirt-izquierda.png',
-        'right': '/assets/products/blue-tshirt/blue-tshirt-derecha.png'
-      },
-      'red': {
-        'front': '/assets/products/red-tshirt/red-tshirt-frente.png',
-        'back': '/assets/products/red-tshirt/red-tshirt-espalda.png',
-        'left': '/assets/products/red-tshirt/red-tshirt-izquierda.png',
-        'right': '/assets/products/red-tshirt/red-tshirt-derecha.png'
-      }
-    };
+      };
+      
+      return blackTshirtViewMap[formValues.view] || blackTshirtViewMap['front'];
+    } else {
+      // Para otros colores, usar la polera blanca como base para la coloración
+      const whiteTshirtViewMap: Record<string, string> = {
+        'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
+        'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
+        'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
+        'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
+      };
+      
+      return whiteTshirtViewMap[formValues.view] || whiteTshirtViewMap['front'];
+    }
+  };
+  
+  // Obtener el valor hexadecimal del color seleccionado
+  const getSelectedColorHex = () => {
+    // Buscar el color seleccionado en las opciones de colores
+    const selectedColor = colorOptions.find(color => color.id === formValues.color);
     
-    // Obtener el mapa de vistas para el color seleccionado o usar blanco como fallback
-    const viewMap = colorViewMap[selectedColor] || colorViewMap['white'];
-    
-    // Retornar la ruta de la imagen según la vista seleccionada
-    return viewMap[formValues.view] || viewMap['front'];
+    // Retornar el valor hexadecimal del color o blanco por defecto
+    return selectedColor?.value || '#FFFFFF';
   };
   
   if (!isMounted) {
@@ -651,6 +710,8 @@ const CustomizeHTML = () => {
                       <HTMLCanvasV2
                         ref={frontCanvasRef}
                         tshirtImage={getTshirtImagePath()}
+                        tshirtColor={getSelectedColorHex()}
+                        useColorization={formValues.color !== 'white'}
                         customImage={currentViewData.image}
                         customText={currentViewData.text || ''}
                         textColor={currentViewData.textColor}
@@ -672,6 +733,8 @@ const CustomizeHTML = () => {
                       <HTMLCanvasV2
                         ref={backCanvasRef}
                         tshirtImage={getTshirtImagePath()}
+                        tshirtColor={getSelectedColorHex()}
+                        useColorization={formValues.color !== 'white'}
                         customImage={currentViewData.image}
                         customText={currentViewData.text || ''}
                         textColor={currentViewData.textColor}
@@ -693,6 +756,8 @@ const CustomizeHTML = () => {
                       <HTMLCanvasV2
                         ref={leftCanvasRef}
                         tshirtImage={getTshirtImagePath()}
+                        tshirtColor={getSelectedColorHex()}
+                        useColorization={formValues.color !== 'white'}
                         customImage={currentViewData.image}
                         customText={currentViewData.text || ''}
                         textColor={currentViewData.textColor}
@@ -714,6 +779,8 @@ const CustomizeHTML = () => {
                       <HTMLCanvasV2
                         ref={rightCanvasRef}
                         tshirtImage={getTshirtImagePath()}
+                        tshirtColor={getSelectedColorHex()}
+                        useColorization={formValues.color !== 'white'}
                         customImage={currentViewData.image}
                         customText={currentViewData.text || ''}
                         textColor={currentViewData.textColor}
