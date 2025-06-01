@@ -353,8 +353,8 @@ const CustomizeHTML = () => {
         tl.kill();
       };
     }
-  }, [isPageMounted]);
-  
+  }, [isPageMounted, previewRef, optionsRef]);
+
   // Función para agregar al carrito
   const handleAddToCart = () => {
     // Guardar la vista actual para volver a ella
@@ -370,121 +370,169 @@ const CustomizeHTML = () => {
       });
     }
     
-    // Cambiar a cada vista para capturar las imágenes
-    // Primero capturamos la vista actual
-    let frontImage: string | undefined, backImage: string | undefined, leftImage: string | undefined, rightImage: string | undefined;
+    // Identificar qué vistas fueron personalizadas (tienen texto o imagen)
+    const hasCustomizationInView = (view: 'front' | 'back' | 'left' | 'right'): boolean => {
+      return !!(formValues[view].text || formValues[view].image);
+    };
     
-    // Capturar las imágenes de cada vista
-    // Nota: Esto funciona porque React renderiza inmediatamente al cambiar el estado
-    // y nuestros refs están configurados para cada vista
+    // Verificar qué vistas tienen personalización
+    const frontHasCustomization = hasCustomizationInView('front');
+    const backHasCustomization = hasCustomizationInView('back');
+    const leftHasCustomization = hasCustomizationInView('left');
+    const rightHasCustomization = hasCustomizationInView('right');
     
-    // Capturar vista frontal
-    setValue('view', 'front');
-    // Esperar a que se renderice
-    setTimeout(() => {
-      frontImage = frontCanvasRef.current?.captureCanvas();
-      
-      // Capturar vista trasera
-      setValue('view', 'back');
-      setTimeout(() => {
-        backImage = backCanvasRef.current?.captureCanvas();
-        
-        // Capturar vista izquierda
+    // Verificar si hay al menos una vista personalizada
+    if (!frontHasCustomization && !backHasCustomization && !leftHasCustomization && !rightHasCustomization) {
+      alert('Por favor, personaliza al menos una vista antes de agregar al carrito.');
+      return;
+    }
+    
+    // Variables para almacenar las imágenes capturadas
+    let frontImage: string | undefined;
+    let backImage: string | undefined;
+    let leftImage: string | undefined;
+    let rightImage: string | undefined;
+    
+    // Capturar vista frontal si tiene personalización
+    const captureFront = () => {
+      if (frontHasCustomization) {
+        setValue('view', 'front');
+        setTimeout(() => {
+          frontImage = frontCanvasRef.current?.captureCanvas();
+          captureBack();
+        }, 100);
+      } else {
+        captureBack();
+      }
+    };
+    
+    // Capturar vista trasera si tiene personalización
+    const captureBack = () => {
+      if (backHasCustomization) {
+        setValue('view', 'back');
+        setTimeout(() => {
+          backImage = backCanvasRef.current?.captureCanvas();
+          captureLeft();
+        }, 100);
+      } else {
+        captureLeft();
+      }
+    };
+    
+    // Capturar vista izquierda si tiene personalización
+    const captureLeft = () => {
+      if (leftHasCustomization) {
         setValue('view', 'left');
         setTimeout(() => {
           leftImage = leftCanvasRef.current?.captureCanvas();
-          
-          // Capturar vista derecha
-          setValue('view', 'right');
-          setTimeout(() => {
-            rightImage = rightCanvasRef.current?.captureCanvas();
-            
-            // Volver a la vista original
-            setValue('view', currentViewValue);
-            
-            // Crear el objeto de diseño personalizado
-            const customDesign = {
-              id: `custom-${Date.now()}`,
-              name: 'Polera Personalizada',
-              price: totalPrice,
-              quantity: 1,
-              color: selectedColorOption.label,
-              size: selectedSizeOption.label,
-              status: CustomDesignStatus.PENDING, // Estado inicial: pendiente de aprobación
-              front: {
-                text: formValues.front.text || '',
-                image: formValues.front.image,
-                textFont: selectedFont,
-                textColor: formValues.front.textColor,
-                textSize: formValues.front.textSize,
-                textPositionX: formValues.front.textPositionX,
-                textPositionY: formValues.front.textPositionY,
-                imagePositionX: formValues.front.imagePositionX,
-                imagePositionY: formValues.front.imagePositionY,
-                imageWidth: formValues.front.imageWidth,
-                imageHeight: formValues.front.imageHeight,
-                previewImage: frontImage
-              },
-              back: {
-                text: formValues.back.text || '',
-                image: formValues.back.image,
-                textFont: selectedFont,
-                textColor: formValues.back.textColor,
-                textSize: formValues.back.textSize,
-                textPositionX: formValues.back.textPositionX,
-                textPositionY: formValues.back.textPositionY,
-                imagePositionX: formValues.back.imagePositionX,
-                imagePositionY: formValues.back.imagePositionY,
-                imageWidth: formValues.back.imageWidth,
-                imageHeight: formValues.back.imageHeight,
-                previewImage: backImage
-              },
-              left: {
-                text: formValues.left.text || '',
-                image: formValues.left.image,
-                textFont: selectedFont,
-                textColor: formValues.left.textColor,
-                textSize: formValues.left.textSize,
-                textPositionX: formValues.left.textPositionX,
-                textPositionY: formValues.left.textPositionY,
-                imagePositionX: formValues.left.imagePositionX,
-                imagePositionY: formValues.left.imagePositionY,
-                imageWidth: formValues.left.imageWidth,
-                imageHeight: formValues.left.imageHeight,
-                previewImage: leftImage
-              },
-              right: {
-                text: formValues.right.text || '',
-                image: formValues.right.image,
-                textFont: selectedFont,
-                textColor: formValues.right.textColor,
-                textSize: formValues.right.textSize,
-                textPositionX: formValues.right.textPositionX,
-                textPositionY: formValues.right.textPositionY,
-                imagePositionX: formValues.right.imagePositionX,
-                imagePositionY: formValues.right.imagePositionY,
-                imageWidth: formValues.right.imageWidth,
-                imageHeight: formValues.right.imageHeight,
-                previewImage: rightImage
-              },
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            
-            // Añadir al carrito
-            addCustomItem(customDesign, 1);
-            
-            // Mostrar mensaje de éxito
-            alert('¡Diseño personalizado añadido al carrito!');
-            
-            // Opcional: redirigir al carrito o a otra página
-            // router.push('/cart');
-            
-            console.log('Producto personalizado agregado al carrito:', customDesign);
-          }, 100);
+          captureRight();
         }, 100);
-      }, 100);
-    }, 100);
+      } else {
+        captureRight();
+      }
+    };
+    
+    // Capturar vista derecha si tiene personalización
+    const captureRight = () => {
+      if (rightHasCustomization) {
+        setValue('view', 'right');
+        setTimeout(() => {
+          rightImage = rightCanvasRef.current?.captureCanvas();
+          finishCapture();
+        }, 100);
+      } else {
+        finishCapture();
+      }
+    };
+    
+    // Finalizar la captura y crear el objeto de diseño personalizado
+    const finishCapture = () => {
+      // Volver a la vista original
+      setValue('view', currentViewValue);
+      
+      // Crear el objeto de diseño personalizado
+      const customDesign = {
+        id: `custom-${Date.now()}`,
+        name: 'Polera Personalizada',
+        price: totalPrice,
+        quantity: 1,
+        color: selectedColorOption.label,
+        size: selectedSizeOption.label,
+        status: CustomDesignStatus.PENDING, // Estado inicial: pendiente de aprobación
+        front: {
+          text: formValues.front.text || '',
+          image: formValues.front.image,
+          textFont: selectedFont,
+          textColor: formValues.front.textColor,
+          textSize: formValues.front.textSize,
+          textPositionX: formValues.front.textPositionX,
+          textPositionY: formValues.front.textPositionY,
+          imagePositionX: formValues.front.imagePositionX,
+          imagePositionY: formValues.front.imagePositionY,
+          imageWidth: formValues.front.imageWidth,
+          imageHeight: formValues.front.imageHeight,
+          previewImage: frontImage
+        },
+        back: {
+          text: formValues.back.text || '',
+          image: formValues.back.image,
+          textFont: selectedFont,
+          textColor: formValues.back.textColor,
+          textSize: formValues.back.textSize,
+          textPositionX: formValues.back.textPositionX,
+          textPositionY: formValues.back.textPositionY,
+          imagePositionX: formValues.back.imagePositionX,
+          imagePositionY: formValues.back.imagePositionY,
+          imageWidth: formValues.back.imageWidth,
+          imageHeight: formValues.back.imageHeight,
+          previewImage: backImage
+        },
+        left: {
+          text: formValues.left.text || '',
+          image: formValues.left.image,
+          textFont: selectedFont,
+          textColor: formValues.left.textColor,
+          textSize: formValues.left.textSize,
+          textPositionX: formValues.left.textPositionX,
+          textPositionY: formValues.left.textPositionY,
+          imagePositionX: formValues.left.imagePositionX,
+          imagePositionY: formValues.left.imagePositionY,
+          imageWidth: formValues.left.imageWidth,
+          imageHeight: formValues.left.imageHeight,
+          previewImage: leftImage
+        },
+        right: {
+          text: formValues.right.text || '',
+          image: formValues.right.image,
+          textFont: selectedFont,
+          textColor: formValues.right.textColor,
+          textSize: formValues.right.textSize,
+          textPositionX: formValues.right.textPositionX,
+          textPositionY: formValues.right.textPositionY,
+          imagePositionX: formValues.right.imagePositionX,
+          imagePositionY: formValues.right.imagePositionY,
+          imageWidth: formValues.right.imageWidth,
+          imageHeight: formValues.right.imageHeight,
+          previewImage: rightImage
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Añadir al carrito
+      addCustomItem(customDesign, 1);
+      
+      // Mostrar mensaje de éxito
+      alert('¡Diseño personalizado añadido al carrito!');
+      
+      // Opcional: redirigir al carrito o a otra página
+      // router.push('/cart');
+      
+      console.log('Producto personalizado agregado al carrito:', customDesign);
+    };
+    
+    // Iniciar el proceso de captura
+    captureFront();
   };
   
   // Solución para problemas de hidratación
