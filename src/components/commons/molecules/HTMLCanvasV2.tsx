@@ -153,6 +153,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     return null;
   }, [userImg, imagePosition, imageSize]);
 
+  // Efecto para dibujar en el canvas
   // Función para dibujar en el canvas
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -164,14 +165,10 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     // Limpiar el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Dibujar un fondo gris claro
-    ctx.fillStyle = '#f0f0f0';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
     // Dibujar la imagen de la polera
     if (tshirtImg) {
       // Verificar si es una imagen de polera negra (contiene 'black-tshirt' en la ruta)
-      const isBlackTshirt = tshirtImage.includes('black-tshirt');
+      const isBlackTshirt = tshirtImg.src.includes('black-tshirt');
       
       // Si no es una polera negra y se debe colorizar
       if (!isBlackTshirt && useColorization && tshirtColor !== '#FFFFFF') {
@@ -322,14 +319,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
       
       ctx.restore();
     }
-  }, [tshirtImg, tshirtImage, tshirtColor, useColorization, userImg, imagePosition, imageSize, textPosition, textSize, textFont, textColor, customText, isDragging, dragTarget, isResizing]);
-
-  // Efecto para dibujar en el canvas cuando cambia la imagen de la polera
-  useEffect(() => {
-    if (tshirtImg) {
-      drawCanvas();
-    }
-  }, [tshirtImg, tshirtImage, drawCanvas]);
+  }, [tshirtImg, tshirtColor, useColorization, userImg, imagePosition, imageSize, textPosition, textSize, textFont, textColor, customText, isDragging, dragTarget, isResizing]);
 
   // Función para manejar el movimiento del mouse
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -498,7 +488,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
         setImagePosition({ x: newPosX, y: newPosY });
       }
     }
-  }, [isDragging, isResizing, dragTarget, dragOffset, resizeHandle, startSize, imagePosition, userImg, customText, getResizeHandle, isOverImage, isOverText, canvasRef, imageSize]);
+  }, [isDragging, isResizing, dragTarget, dragOffset, resizeHandle, startSize, imagePosition, userImg, customText, getResizeHandle, isOverImage, isOverText, canvasRef, imageSize, textFont, textSize]);
   
   // Manejar el inicio del arrastre
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -635,69 +625,235 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     captureCanvas
   }), [captureCanvas]);
 
-  // Efecto para el redimensionamiento de la ventana y cambios de orientación
+  // Manejadores de eventos táctiles para dispositivos móviles
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevenir el comportamiento predeterminado (scrolling, zooming)
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0]; // Primer toque
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Usar la misma lógica que handleMouseDown
+    // Comprobar si se ha tocado un controlador de redimensionamiento
+    const handle = getResizeHandle(x, y);
+    if (handle) {
+      setIsResizing(true);
+      setResizeHandle(handle);
+      setStartSize({ ...imageSize });
+      return;
+    }
+    
+    // Comprobar si se ha tocado el texto
+    if (customText && isOverText(x, y)) {
+      setIsDragging(true);
+      setDragTarget('text');
+      // Calcular el offset desde el punto de toque hasta el centro del texto
+      setDragOffset({
+        x: x - textPosition.x,
+        y: y - textPosition.y
+      });
+      return;
+    }
+    
+    // Comprobar si se ha tocado la imagen
+    if (userImg && isOverImage(x, y)) {
+      setIsDragging(true);
+      setDragTarget('image');
+      // Calcular el offset desde el punto de toque hasta el centro de la imagen
+      setDragOffset({
+        x: x - imagePosition.x,
+        y: y - imagePosition.y
+      });
+    }
+  }, [customText, userImg, imageSize, textPosition, imagePosition, getResizeHandle, isOverText, isOverImage]);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevenir el comportamiento predeterminado
+    
+    if (!canvasRef.current) return;
+    if (!isDragging && !isResizing) return;
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const touch = e.touches[0]; // Primer toque
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Manejar el arrastre - misma lógica que handleMouseMove
+    if (isDragging && dragTarget && canvasRef.current) {
+      if (dragTarget === 'image' && userImg) {
+        // Usar el offset para calcular la nueva posición
+        // Esto es clave para un movimiento fluido
+        let newX = x - dragOffset.x;
+        let newY = y - dragOffset.y;
+        
+        // Limitar la posición para que la imagen no se salga del canvas
+        const halfWidth = imageSize.width / 2;
+        const halfHeight = imageSize.height / 2;
+        const canvasWidth = canvasRef.current.width;
+        const canvasHeight = canvasRef.current.height;
+        
+        // Aplicar límites
+        newX = Math.max(halfWidth, Math.min(newX, canvasWidth - halfWidth));
+        newY = Math.max(halfHeight, Math.min(newY, canvasHeight - halfHeight));
+        
+        setImagePosition({ x: newX, y: newY });
+      } else if (dragTarget === 'text' && customText) {
+        // Usar el offset para calcular la nueva posición
+        let newX = x - dragOffset.x;
+        let newY = y - dragOffset.y;
+        
+        // Obtener el contexto para medir el texto
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.font = `${textSize}px ${textFont}`;
+          const textWidth = ctx.measureText(customText).width;
+          const textHeight = textSize;
+          const canvasWidth = canvasRef.current.width;
+          const canvasHeight = canvasRef.current.height;
+          
+          // Aplicar límites para el texto
+          newX = Math.max(textWidth / 2 + 5, Math.min(newX, canvasWidth - textWidth / 2 - 5));
+          newY = Math.max(textHeight / 2 + 5, Math.min(newY, canvasHeight - textHeight / 2 - 5));
+        }
+        
+        setTextPosition({ x: newX, y: newY });
+      }
+    }
+    
+    // Manejar el redimensionamiento - misma lógica que en handleMouseMove
+    if (isResizing && resizeHandle && userImg && canvasRef.current) {
+      const centerX = imagePosition.x;
+      const centerY = imagePosition.y;
+      
+      let newWidth = startSize.width;
+      let newHeight = startSize.height;
+      
+      // Obtener la proporción original para usarla solo en las esquinas
+      const ratio = startSize.width / startSize.height;
+      const keepAspectRatio = !['n', 's', 'e', 'w'].includes(resizeHandle);
+      
+      // Misma lógica de redimensionamiento que en handleMouseMove
+      switch (resizeHandle) {
+        case 'nw': // Esquina superior izquierda
+          newWidth = startSize.width + (centerX - x) * 2;
+          newHeight = startSize.height + (centerY - y) * 2;
+          break;
+        case 'ne': // Esquina superior derecha
+          newWidth = startSize.width + (x - centerX) * 2;
+          newHeight = startSize.height + (centerY - y) * 2;
+          break;
+        case 'se': // Esquina inferior derecha
+          newWidth = startSize.width + (x - centerX) * 2;
+          newHeight = startSize.height + (y - centerY) * 2;
+          break;
+        case 'sw': // Esquina inferior izquierda
+          newWidth = startSize.width + (centerX - x) * 2;
+          newHeight = startSize.height + (y - centerY) * 2;
+          break;
+        case 'n': // Borde superior (solo altura)
+          newHeight = startSize.height + (centerY - y) * 2;
+          break;
+        case 's': // Borde inferior (solo altura)
+          newHeight = startSize.height + (y - centerY) * 2;
+          break;
+        case 'e': // Borde derecho (solo ancho)
+          newWidth = startSize.width + (x - centerX) * 2;
+          break;
+        case 'w': // Borde izquierdo (solo ancho)
+          newWidth = startSize.width + (centerX - x) * 2;
+          break;
+      }
+      
+      // Mantener proporción solo para las esquinas
+      if (keepAspectRatio) {
+        if (Math.abs(newWidth / newHeight - ratio) > 0.1) {
+          if (newWidth / ratio > newHeight) {
+            newWidth = newHeight * ratio;
+          } else {
+            newHeight = newWidth / ratio;
+          }
+        }
+      }
+      
+      // Aplicar límites de tamaño
+      const minSize = 30;
+      const canvasWidth = canvasRef.current.width;
+      const canvasHeight = canvasRef.current.height;
+      const maxWidth = canvasWidth * 0.9;
+      const maxHeight = canvasHeight * 0.9;
+      
+      newWidth = Math.max(minSize, Math.min(newWidth, maxWidth));
+      newHeight = Math.max(minSize, Math.min(newHeight, maxHeight));
+      
+      setImageSize({ width: newWidth, height: newHeight });
+    }
+  }, [isDragging, isResizing, dragTarget, dragOffset, resizeHandle, startSize, imagePosition, userImg, customText, imageSize, textFont, textSize]);
+  
+  const handleTouchEnd = useCallback(() => {
+    // Usar la misma lógica que handleMouseUp
+    if (isResizing && onUpdateImageSize) {
+      onUpdateImageSize(imageSize.width, imageSize.height);
+    }
+    
+    if (isDragging && dragTarget === 'text' && onUpdateTextPosition) {
+      onUpdateTextPosition(textPosition.x, textPosition.y);
+    }
+    
+    if (isDragging && dragTarget === 'image' && onUpdateImagePosition) {
+      onUpdateImagePosition(imagePosition.x, imagePosition.y);
+    }
+    
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
+    setDragTarget(null);
+    
+    // Forzar un redibujado final
+    requestAnimationFrame(() => {
+      if (canvasRef.current) {
+        drawCanvas();
+      }
+    });
+  }, [isResizing, isDragging, dragTarget, imageSize, textPosition, imagePosition, onUpdateImageSize, onUpdateTextPosition, onUpdateImagePosition, drawCanvas]);
+
+  // Efecto para el redimensionamiento de la ventana
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current) return;
 
-      // Usar requestAnimationFrame para asegurar que el cálculo se realice en el momento adecuado
-      requestAnimationFrame(() => {
-        if (!containerRef.current) return;
-        
-        const containerWidth = containerRef.current.clientWidth;
-        // Asegurar que el canvas tenga un tamaño mínimo de 250px para dispositivos móviles
-        // y se adapte al contenedor en pantallas más grandes
-        const newWidth = Math.max(250, Math.min(500, containerWidth - 20)); // 20px de margen
-        const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
+      const containerWidth = containerRef.current.clientWidth;
+      const newWidth = Math.min(500, containerWidth - 20); // 20px de margen
+      const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
 
-        setCanvasSize({ width: newWidth, height: newHeight });
-      });
-    };
-    
-    // Función para forzar el redibujado del canvas
-    const forceRedraw = () => {
-      if (canvasRef.current && tshirtImg) {
-        drawCanvas();
-      }
+      setCanvasSize({ width: newWidth, height: newHeight });
     };
 
-    // Llamar al resize inicialmente y forzar el redibujado
     handleResize();
-    // Dar tiempo para que se carguen los recursos antes de dibujar
-    setTimeout(forceRedraw, 100);
-    
-    // Usar un throttle para el evento de resize para mejorar el rendimiento
-    let resizeTimeout: NodeJS.Timeout | null = null;
-    const throttledResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        handleResize();
-        forceRedraw();
-      }, 100);
-    };
-    
-    // Manejar cambios de orientación en dispositivos móviles
-    const handleOrientationChange = () => {
-      // Dar tiempo para que el navegador actualice las dimensiones
-      setTimeout(() => {
-        handleResize();
-        forceRedraw();
-      }, 200);
-    };
-    
-    window.addEventListener('resize', throttledResize);
-    window.addEventListener('orientationchange', handleOrientationChange);
-    
-    return () => {
-      window.removeEventListener('resize', throttledResize);
-      window.removeEventListener('orientationchange', handleOrientationChange);
-    };
-  }, [drawCanvas, tshirtImg]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Efecto para redibujar el canvas cuando cambian estados relevantes
   useEffect(() => {
     if (canvasRef.current) {
       drawCanvas();
     }
-  }, [drawCanvas]);
+  }, [
+    drawCanvas, 
+    canvasSize, 
+    imagePosition, 
+    imageSize, 
+    textPosition, 
+    textSize, 
+    customText, 
+    tshirtImg, 
+    userImg, 
+    tshirtColor
+  ]);
 
   return (
     <div ref={containerRef} className="w-full relative flex flex-col items-center overflow-hidden">
@@ -710,25 +866,26 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
           onKeyDown={handleKeyDown}
           tabIndex={0}
           className="border border-gray-300 rounded-md shadow-sm"
           style={{ 
             maxWidth: '100%',
             minWidth: '250px',
-            display: 'block' // Asegura que el canvas siempre sea visible
+            display: 'block', // Asegura que el canvas siempre sea visible
+            touchAction: 'none' // Prevenir acciones táctiles predeterminadas del navegador
           }}
         />
       </div>
-      {customText && !userImg && (
-        <div className="text-center mt-2 text-sm text-gray-500">
-          Usa las teclas + y - para ajustar el tamaño del texto
-        </div>
-      )}
     </div>
   );
 });
 
+// ...
 // Asignar un displayName para las herramientas de desarrollo
 HTMLCanvasV2.displayName = 'HTMLCanvasV2';
 
