@@ -1,0 +1,83 @@
+'use client';
+
+import React from 'react';
+import { useTheme } from 'next-themes';
+import Text from '@/components/commons/atoms/Text';
+// No necesitamos Image por ahora
+import { useFormContext } from 'react-hook-form';
+
+interface AdminProductFieldsProps {
+  productId?: string;
+  thumbnail?: string;
+}
+
+const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
+  const isEditing = !!productId;
+  
+  // Usamos useFormContext para acceder al formulario principal
+  const { register, formState: { errors } } = useFormContext();
+  
+  return (
+    <div className="admin-product-fields space-y-4 mt-4 p-4 rounded-lg bg-opacity-50 bg-gray-100 dark:bg-gray-800">
+      <Text variant="h3" className="mb-2">{isEditing ? 'Editar Producto' : 'Datos del Producto'}</Text>
+      
+      <div className="mb-4">
+        <label htmlFor="admin-name">
+          <Text variant="body" className="mb-2">Nombre del Producto</Text>
+        </label>
+        <input
+          id="admin-name"
+          type="text"
+          className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+          placeholder="Nombre del producto"
+          {...register('admin.name', { required: 'El nombre es obligatorio' })}
+        />
+        {errors.admin?.name && (
+          <Text variant="small" className="text-red-500 mt-1">
+            El nombre es obligatorio
+          </Text>
+        )}
+      </div>
+      
+      <div className="mb-4">
+        <label htmlFor="admin-description">
+          <Text variant="body" className="mb-2">Descripción</Text>
+        </label>
+        <textarea
+          id="admin-description"
+          className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+          placeholder="Descripción del producto"
+          rows={3}
+          {...register('admin.description', { required: 'La descripción es obligatoria' })}
+        />
+        {errors.admin?.description && (
+          <Text variant="small" className="text-red-500 mt-1">
+            La descripción es obligatoria
+          </Text>
+        )}
+      </div>
+      
+      <div className="mb-4">
+        <label htmlFor="admin-category">
+          <Text variant="body" className="mb-2">Categoría</Text>
+        </label>
+        <input
+          id="admin-category"
+          type="text"
+          className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+          placeholder="Categoría del producto (ej: Urbano, Minimalista, etc.)"
+          {...register('admin.category', { required: 'La categoría es obligatoria' })}
+        />
+        {errors.admin?.category && (
+          <Text variant="small" className="text-red-500 mt-1">
+            La categoría es obligatoria
+          </Text>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AdminProductForm;

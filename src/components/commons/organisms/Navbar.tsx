@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Menu, X, ShoppingCart, Heart, Search } from 'lucide-react';
+import { Menu, X, ShoppingCart, Heart, Search, Settings, Shield } from 'lucide-react';
 import gsap from 'gsap';
 import ThemeToggle from '../molecules/ThemeToggle';
 import AuthNav from '../molecules/AuthNav';
@@ -10,6 +10,7 @@ import Logo from '../atoms/Logo';
 import { useTheme } from 'next-themes';
 import CartDrawer from './CartDrawer';
 import { useCart } from '@/context/CartContext';
+import { useUserRole } from '@/context/UserRoleContext';
 
 const navigation = [
   { name: 'Inicio', href: '/' },
@@ -24,6 +25,7 @@ const Navbar = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { resolvedTheme } = useTheme();
   const { cart } = useCart();
+  const { role, isAdmin, toggleRole } = useUserRole();
   const navLinksRef = useRef<HTMLDivElement>(null);
   const navItemsRef = useRef<(HTMLAnchorElement | null)[]>([]);
   
@@ -192,6 +194,25 @@ const Navbar = () => {
                 </span>
               )}
             </button>
+            {/* Botón para cambiar rol (solo para desarrollo) */}
+            <button 
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative"
+              onClick={toggleRole}
+              title={`Cambiar rol: ${role === 'admin' ? 'Usuario' : 'Administrador'}`}
+            >
+              <Settings className="h-5 w-5 text-gray-800 dark:text-gray-300" />
+              {role === 'admin' && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  A
+                </span>
+              )}
+            </button>
+            {/* Enlace al panel de administración (solo visible para administradores) */}
+            {isAdmin && (
+              <Link href="/admin/products" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Panel de administración">
+                <Shield className="h-5 w-5 text-blue-600" />
+              </Link>
+            )}
             <ThemeToggle />
             <AuthNav />
           </div>
@@ -240,6 +261,25 @@ const Navbar = () => {
                 <Heart className="h-5 w-5 inline-block mr-2" />
                 Favoritos
               </Link>
+              {/* Opciones de administrador en móvil */}
+              <div className="flex items-center px-3 py-2">
+                <button 
+                  onClick={toggleRole}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}
+                >
+                  <Settings className="h-5 w-5 inline-block mr-2" />
+                  Cambiar a {role === 'admin' ? 'Usuario' : 'Admin'}
+                </button>
+              </div>
+              {isAdmin && (
+                <Link
+                  href="/admin/products"
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium text-blue-600`}
+                >
+                  <Shield className="h-5 w-5 inline-block mr-2" />
+                  Panel de Administración
+                </Link>
+              )}
               <div className="px-3 py-2">
                 <AuthNav />
               </div>

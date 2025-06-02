@@ -11,6 +11,13 @@ import HTMLCanvasV2, { HTMLCanvasHandle } from '@/components/commons/molecules/H
 import { useForm, FormProvider } from 'react-hook-form';
 import gsap from 'gsap';
 import Image from 'next/image';
+import { useUserRole } from '@/context/UserRoleContext';
+import { useRouter, useSearchParams } from 'next/navigation';
+import AdminProductForm from '@/components/commons/organisms/AdminProductForm';
+import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail } from '@/services/adminProductService';
+import { AdminProduct, AngleDesign } from '@/types/product';
+// Los tipos se usan en la función saveAdminProduct
+import { toast } from 'react-hot-toast';
 
 // Interfaces
 interface ViewCustomization {
@@ -38,7 +45,15 @@ interface CustomizationOptions {
   back: ViewCustomization;
   left: ViewCustomization;
   right: ViewCustomization;
+  // Campos para administrador
+  admin?: {
+    name: string;
+    description: string;
+    category: string;
+  };
 }
+
+// Eliminando duplicación
 
 // Opciones predefinidas
 const colorOptions = [
@@ -186,6 +201,11 @@ const tshirtViews = [
 const CustomizeHTML = () => {
   // Estado del tema
   const { resolvedTheme } = useTheme();
+  const { isAdmin } = useUserRole();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('productId');
+  
   const isDarkMode = resolvedTheme === 'dark';
   
   // Referencias para animaciones
@@ -209,7 +229,7 @@ const CustomizeHTML = () => {
     defaultValues: {
       color: 'white',
       size: 'm',
-      basePrice: 15000, // Precio base en pesos chilenos
+      basePrice: 12990, // Precio base en pesos chilenos
       details: '',
       view: 'front',
       // Valores predeterminados para cada vista
@@ -218,52 +238,52 @@ const CustomizeHTML = () => {
         image: null,
         textFont: 'Arial',
         textColor: '#000000',
-        textSize: 24,
+        textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
-        imageWidth: 100,
-        imageHeight: 100
+        imageWidth: 150,
+        imageHeight: 150
       },
       back: {
         text: '',
         image: null,
         textFont: 'Arial',
         textColor: '#000000',
-        textSize: 24,
+        textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
-        imageWidth: 100,
-        imageHeight: 100
+        imageWidth: 150,
+        imageHeight: 150
       },
       left: {
         text: '',
         image: null,
         textFont: 'Arial',
         textColor: '#000000',
-        textSize: 24,
+        textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
-        imageWidth: 100,
-        imageHeight: 100
+        imageWidth: 150,
+        imageHeight: 150
       },
       right: {
         text: '',
         image: null,
         textFont: 'Arial',
         textColor: '#000000',
-        textSize: 24,
+        textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
-        imageWidth: 100,
-        imageHeight: 100
+        imageWidth: 150,
+        imageHeight: 150
       }
     }
   });
@@ -424,6 +444,152 @@ const CustomizeHTML = () => {
       };
     }
   }, [isPageMounted, previewRef, optionsRef]);
+
+  // Función para crear un objeto AngleDesign a partir de los datos del formulario
+  const getAngleDesign = (view: 'front' | 'back' | 'left' | 'right'): AngleDesign => {
+    const viewData = formValues[view];
+    const design: AngleDesign = {};
+    
+    // Añadir texto si existe
+    if (viewData.text) {
+      design.text = {
+        content: viewData.text,
+        font: viewData.textFont ?? 'Arial',
+        color: viewData.textColor ?? '#000000',
+        size: viewData.textSize ?? 30,
+        position: {
+          x: viewData.textPositionX ?? 250,
+          y: viewData.textPositionY ?? 250
+        }
+      };
+    }
+    
+    // Añadir imagen si existe
+    if (viewData.image) {
+      design.image = {
+        src: viewData.image,
+        position: {
+          x: viewData.imagePositionX ?? 250,
+          y: viewData.imagePositionY ?? 250
+        },
+        size: {
+          width: viewData.imageWidth ?? 200,
+          height: viewData.imageHeight ?? 200
+        }
+      };
+    }
+    
+    return design;
+  };
+  
+  // Función para obtener el color seleccionado en formato hexadecimal
+  const getSelectedColorHex = (): string => {
+    return selectedColorOption?.value || '#FFFFFF';
+  };
+
+  // Función para guardar producto (admin) o agregar al carrito (usuario)
+  const handleFormSubmit = async () => {
+    console.log('Iniciando handleFormSubmit');
+    // Validar el formulario
+    const isValid = await methods.trigger();
+    console.log('Resultado de validación:', isValid);
+    console.log('Errores del formulario:', methods.formState.errors);
+    
+    if (!isValid) {
+      toast.error('Por favor, completa todos los campos requeridos');
+      return;
+    }
+    console.log('Formulario válido, continuando...');
+    
+    if (isAdmin) {
+      // Obtener el canvas actual para generar la miniatura
+      console.log('Buscando canvas-front...');
+      console.log('Elementos con id canvas-front:', document.querySelectorAll('#canvas-front'));
+      
+      // Intentar obtener el canvas de varias formas
+      let frontCanvas = document.getElementById('canvas-front') as HTMLCanvasElement;
+      
+      if (!frontCanvas) {
+        console.log('No se encontró el canvas por ID, intentando con querySelector');
+        frontCanvas = document.querySelector('canvas#canvas-front') as HTMLCanvasElement;
+      }
+      
+      if (!frontCanvas) {
+        console.log('No se encontró el canvas por querySelector, intentando con cualquier canvas');
+        frontCanvas = document.querySelector('canvas') as HTMLCanvasElement;
+      }
+      
+      if (!frontCanvas) {
+        console.error('No se pudo encontrar ningún canvas en el documento');
+        toast.error('Error al generar la miniatura: No se encontró el canvas');
+        return;
+      }
+      
+      console.log('Canvas encontrado:', frontCanvas);
+      console.log('Dimensiones del canvas:', frontCanvas.width, 'x', frontCanvas.height);
+      
+      // Generar miniatura desde el canvas frontal
+      const thumbnailUrl = generateThumbnail(frontCanvas);
+      console.log('Miniatura generada:', thumbnailUrl ? 'Generada correctamente' : 'Error al generar');
+      
+      // Obtener datos del formulario
+      const formData = methods.getValues();
+      console.log('Datos del formulario:', formData);
+      console.log('Valor de admin:', formData.admin);
+      
+      // Asegurarse de que los campos admin existan
+      if (!formData.admin) {
+        console.error('Los campos admin no existen en el formulario');
+        toast.error('Error: Faltan los campos de administrador');
+        return;
+      }
+      
+      // Crear objeto de producto con validación adicional
+      const productData: AdminProduct = {
+        id: productId ?? Date.now().toString(),
+        name: formData.admin?.name ?? 'Producto sin nombre',
+        description: formData.admin?.description ?? 'Sin descripción',
+        category: formData.admin?.category ?? 'Sin categoría',
+        price: calculateTotalPrice(),
+        availableColors: [getSelectedColorHex()],
+        availableSizes: [formData.size],
+        thumbnail: thumbnailUrl || '',
+        angles: {
+          front: getAngleDesign('front'),
+          back: getAngleDesign('back'),
+          left: getAngleDesign('left'),
+          right: getAngleDesign('right')
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      // Guardar o actualizar el producto
+      console.log('Guardando producto:', productData);
+      try {
+        if (productId) {
+          updateAdminProduct(productData);
+          toast.success(`Producto "${productData.name}" actualizado correctamente`);
+        } else {
+          saveAdminProduct(productData);
+          toast.success(`Producto "${productData.name}" creado correctamente`);
+        }
+        console.log('Producto guardado correctamente');
+      } catch (error) {
+        console.error('Error al guardar el producto:', error);
+        toast.error('Error al guardar el producto');
+      }
+      
+      // Redireccionar a la lista de productos después de un breve retraso
+      // para asegurar que los datos se hayan guardado correctamente
+      setTimeout(() => {
+        router.push('/admin/products');
+      }, 1000); // Aumentamos el tiempo de espera para asegurar que se complete el guardado
+    } else {
+      // Lógica para agregar al carrito (usuarios normales)
+      handleAddToCart();
+    }
+  };
 
   // Función para agregar al carrito
   const handleAddToCart = () => {
@@ -638,14 +804,94 @@ const CustomizeHTML = () => {
     }
   };
   
-  // Obtener el valor hexadecimal del color seleccionado
-  const getSelectedColorHex = () => {
-    // Buscar el color seleccionado en las opciones de colores
-    const selectedColor = colorOptions.find(color => color.id === formValues.color);
-    
-    // Retornar el valor hexadecimal del color o blanco por defecto
-    return selectedColor?.value || '#FFFFFF';
-  };
+  // La función getSelectedColorHex ya está definida arriba
+  
+  // Cargar producto existente si se proporciona un ID
+  useEffect(() => {
+    if (productId && isAdmin) {
+      const loadedProduct = getAdminProductById(productId);
+      if (loadedProduct) {
+        // Cargar datos del producto en el formulario
+        setValue('color', colorOptions.find(c => c.value === loadedProduct.availableColors[0])?.id ?? 'white');
+        setValue('size', loadedProduct.availableSizes[0] ?? 'M');
+        setValue('basePrice', loadedProduct.price);
+        
+        // Cargar campos de administrador
+        setValue('admin.name', loadedProduct.name);
+        setValue('admin.description', loadedProduct.description);
+        setValue('admin.category', loadedProduct.category);
+        
+        // Cargar diseños de cada ángulo si existen
+        if (loadedProduct.angles?.front) {
+          setValue('front', {
+            text: loadedProduct.angles.front.text?.content ?? '',
+            image: loadedProduct.angles.front.image?.src ?? null,
+            textFont: loadedProduct.angles.front.text?.font ?? 'Arial',
+            textColor: loadedProduct.angles.front.text?.color ?? '#000000',
+            textSize: loadedProduct.angles.front.text?.size ?? 30,
+            textPositionX: loadedProduct.angles.front.text?.position?.x ?? 250,
+            textPositionY: loadedProduct.angles.front.text?.position?.y ?? 250,
+            imagePositionX: loadedProduct.angles.front.image?.position?.x ?? 250,
+            imagePositionY: loadedProduct.angles.front.image?.position?.y ?? 250,
+            imageWidth: loadedProduct.angles.front.image?.size?.width ?? 150,
+            imageHeight: loadedProduct.angles.front.image?.size?.height ?? 150
+          });
+        }
+        
+        if (loadedProduct.angles?.back) {
+          setValue('back', {
+            text: loadedProduct.angles.back.text?.content ?? '',
+            image: loadedProduct.angles.back.image?.src ?? null,
+            textFont: loadedProduct.angles.back.text?.font ?? 'Arial',
+            textColor: loadedProduct.angles.back.text?.color ?? '#000000',
+            textSize: loadedProduct.angles.back.text?.size ?? 30,
+            textPositionX: loadedProduct.angles.back.text?.position?.x ?? 250,
+            textPositionY: loadedProduct.angles.back.text?.position?.y ?? 250,
+            imagePositionX: loadedProduct.angles.back.image?.position?.x ?? 250,
+            imagePositionY: loadedProduct.angles.back.image?.position?.y ?? 250,
+            imageWidth: loadedProduct.angles.back.image?.size?.width ?? 150,
+            imageHeight: loadedProduct.angles.back.image?.size?.height ?? 150
+          });
+        }
+        
+        if (loadedProduct.angles?.left) {
+          setValue('left', {
+            text: loadedProduct.angles.left.text?.content ?? '',
+            image: loadedProduct.angles.left.image?.src ?? null,
+            textFont: loadedProduct.angles.left.text?.font ?? 'Arial',
+            textColor: loadedProduct.angles.left.text?.color ?? '#000000',
+            textSize: loadedProduct.angles.left.text?.size ?? 30,
+            textPositionX: loadedProduct.angles.left.text?.position?.x ?? 250,
+            textPositionY: loadedProduct.angles.left.text?.position?.y ?? 250,
+            imagePositionX: loadedProduct.angles.left.image?.position?.x ?? 250,
+            imagePositionY: loadedProduct.angles.left.image?.position?.y ?? 250,
+            imageWidth: loadedProduct.angles.left.image?.size?.width ?? 150,
+            imageHeight: loadedProduct.angles.left.image?.size?.height ?? 150
+          });
+        }
+        
+        if (loadedProduct.angles?.right) {
+          setValue('right', {
+            text: loadedProduct.angles.right.text?.content ?? '',
+            image: loadedProduct.angles.right.image?.src ?? null,
+            textFont: loadedProduct.angles.right.text?.font ?? 'Arial',
+            textColor: loadedProduct.angles.right.text?.color ?? '#000000',
+            textSize: loadedProduct.angles.right.text?.size ?? 30,
+            textPositionX: loadedProduct.angles.right.text?.position?.x ?? 250,
+            textPositionY: loadedProduct.angles.right.text?.position?.y ?? 250,
+            imagePositionX: loadedProduct.angles.right.image?.position?.x ?? 250,
+            imagePositionY: loadedProduct.angles.right.image?.position?.y ?? 250,
+            imageWidth: loadedProduct.angles.right.image?.size?.width ?? 150,
+            imageHeight: loadedProduct.angles.right.image?.size?.height ?? 150
+          });
+        }
+        
+        toast.success(`Producto "${loadedProduct.name}" cargado para edición`);
+      } else {
+        toast.error('No se encontró el producto solicitado');
+      }
+    }
+  }, [productId, isAdmin, setValue]);
   
   if (!isMounted) {
     return (
@@ -681,7 +927,14 @@ const CustomizeHTML = () => {
         </div>
         
         <FormProvider {...methods}>
-          <form className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <form 
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8" 
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log('Formulario enviado');
+              handleFormSubmit();
+            }}
+          >
             {/* Previsualización */}
             <div className="order-2 lg:order-1">
               <Card className="p-6 border rounded-xl shadow-lg">
@@ -1004,19 +1257,44 @@ const CustomizeHTML = () => {
                   />
                 </div>
                 
-                {/* Botón de Agregar al Carrito */}
+                {/* Botón de Agregar al Carrito o Crear Producto */}
                 <div className="mt-8">
                   <button
-                    type="button"
-                    onClick={handleAddToCart}
+                    type="submit"
                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                    </svg>
-                    Agregar al Carrito
+                    {isAdmin ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                        {productId ? 'Actualizar Producto' : 'Crear Producto'}
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                        </svg>
+                        Agregar al Carrito
+                      </>
+                    )}
                   </button>
                 </div>
+                
+                {/* Opciones de administrador */}
+                {isAdmin && (
+                  <div className="mt-8">
+                    <Card className="p-4 border-t-4 border-blue-600">
+                      <Text variant="h3" className="mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+                        </svg>
+                        Opciones de Administrador
+                      </Text>
+                      <AdminProductForm productId={productId ?? undefined} />
+                    </Card>
+                  </div>
+                )}
               </Card>
             </div>
           </form>
