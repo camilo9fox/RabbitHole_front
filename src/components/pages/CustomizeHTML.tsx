@@ -1053,7 +1053,7 @@ const CustomizeHTML = () => {
                     )}
                   </div>
                   
-                  {/* Precio y botón de añadir al carrito */}
+                  {/* Precio y botón de añadir al carrito (solo para usuarios normales) */}
                   <div className="flex flex-col sm:flex-row justify-between items-center">
                     <div className="mb-4 sm:mb-0">
                       <Text variant="h3" className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -1063,13 +1063,15 @@ const CustomizeHTML = () => {
                         Incluye personalización y envío
                       </Text>
                     </div>
-                    <Button 
-                      variant="primary" 
-                      size="lg"
-                      onClick={handleAddToCart}
-                    >
-                      Añadir al Carrito
-                    </Button>
+                    {!isAdmin && (
+                      <Button 
+                        variant="primary" 
+                        size="lg"
+                        onClick={handleAddToCart}
+                      >
+                        Añadir al Carrito
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -1257,42 +1259,48 @@ const CustomizeHTML = () => {
                   />
                 </div>
                 
-                {/* Botón de Agregar al Carrito o Crear Producto */}
-                <div className="mt-8">
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
-                  >
-                    {isAdmin ? (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                        </svg>
-                        {productId ? 'Actualizar Producto' : 'Crear Producto'}
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                        </svg>
-                        Agregar al Carrito
-                      </>
-                    )}
-                  </button>
-                </div>
+                {/* Botón de Agregar al Carrito (solo para usuarios normales) */}
+                {!isAdmin && (
+                  <div className="mt-8">
+                    <button
+                      type="submit"
+                      className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                      </svg>
+                      Agregar al Carrito
+                    </button>
+                  </div>
+                )}
                 
                 {/* Opciones de administrador */}
                 {isAdmin && (
                   <div className="mt-8">
-                    <Card className="p-4 border-t-4 border-blue-600">
-                      <Text variant="h3" className="mb-4 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <div className={`p-6 rounded-xl shadow-lg border ${isDarkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}>
+                      <div className={`flex items-center mb-4 pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
                         </svg>
-                        Opciones de Administrador
-                      </Text>
+                        <Text variant="h3" className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                          Opciones de Administrador
+                        </Text>
+                      </div>
                       <AdminProductForm productId={productId ?? undefined} />
-                    </Card>
+                      
+                      {/* Botón de Crear/Actualizar Producto */}
+                      <div className="mt-6">
+                        <button
+                          type="submit"
+                          className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-md transition-colors duration-200 flex items-center justify-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          {productId ? 'Actualizar Producto' : 'Crear Producto'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </Card>
