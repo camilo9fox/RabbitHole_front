@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { getAdminProductById } from '@/services/adminProductService';
 import { AdminProduct, AngleDesign } from '@/types/product';
@@ -48,11 +48,14 @@ export default function ProductDetail() {
   
   // Estados
   const [product, setProduct] = useState<AdminProduct | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [currentAngle, setCurrentAngle] = useState<string>('front');
-  const [selectedColor, setSelectedColor] = useState<string>('');
-  const [selectedSize, setSelectedSize] = useState<string>('');
-  const [quantity, setQuantity] = useState<number>(1);
+  const [loading, setLoading] = useState(true);
+  const [currentAngle, setCurrentAngle] = useState<string>('frente');
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  
+  // Contador para forzar la recreación del canvas cuando sea necesario
+  const canvasKeyCounter = useRef<number>(0);
 
   // Inicializar colores y tallas predeterminados cuando se carga el producto
   useEffect(() => {
@@ -109,12 +112,18 @@ export default function ProductDetail() {
 
   // Manejar cambio de ángulo
   const handleAngleChange = (angle: string) => {
+    console.log(`Cambiando a ángulo: ${angle}`);
+    // Incrementar el contador para forzar la recreación del canvas
+    canvasKeyCounter.current += 1;
     setCurrentAngle(angle);
   };
   
   // Obtener el diseño del producto para el ángulo actual
   const getDesignForAngle = (angle: string): AngleDesign | undefined => {
-    if (!product?.angles) return undefined;
+    if (!product?.angles) {
+      console.log('No hay ángulos definidos en el producto');
+      return undefined;
+    }
     
     // Mapear los ángulos en español a las propiedades en inglés del objeto angles
     const angleMap: Record<string, keyof typeof product.angles> = {
@@ -125,9 +134,14 @@ export default function ProductDetail() {
     };
     
     const angleKey = angleMap[angle];
-    if (!angleKey) return undefined;
+    if (!angleKey) {
+      console.log(`Ángulo no reconocido: ${angle}`);
+      return undefined;
+    }
     
-    return product.angles[angleKey];
+    const design = product.angles[angleKey];
+    console.log(`Diseño para ángulo ${angle} (${angleKey}):`, design);
+    return design;
   };
 
   // Agregar al carrito
@@ -376,10 +390,11 @@ export default function ProductDetail() {
           <div className="space-y-8">
             {/* Canvas del producto con colorización dinámica */}
             <ProductCanvas 
+              key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`} // Usar contador estable en lugar de timestamp
               angle={currentAngle}
               color={selectedColor ?? '#FFFFFF'}
               className="w-full max-w-lg mx-auto"
-              design={product?.angles ? getDesignForAngle(currentAngle) : undefined}
+              design={getDesignForAngle(currentAngle)}
             />
             
             {/* Selector de ángulos */}
