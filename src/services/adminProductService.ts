@@ -61,8 +61,6 @@ export const saveAdminProduct = (product: Partial<AdminProduct>): AdminProduct =
       description: product.description ?? 'Sin descripción',
       price: product.price ?? 0,
       category: product.category ?? 'Sin categoría',
-      availableColors: product.availableColors ?? [],
-      availableSizes: product.availableSizes ?? [],
       thumbnail: product.thumbnail ?? '',
       angles: product.angles ?? {
         front: {},
@@ -70,6 +68,7 @@ export const saveAdminProduct = (product: Partial<AdminProduct>): AdminProduct =
         left: {},
         right: {}
       },
+      inStore: product.inStore ?? false, // Por defecto, los productos no están en la tienda
       createdAt: product.createdAt ?? Date.now(),
       updatedAt: Date.now()
     };
@@ -151,7 +150,7 @@ export const generateThumbnail = (canvas: HTMLCanvasElement): string => {
   
   try {
     // Verificar que el canvas sea válido
-    if (!canvas || !canvas.width || !canvas.height) {
+    if (!canvas?.width || !canvas?.height) {
       console.error('Canvas inválido o sin dimensiones');
       return '';
     }
@@ -197,4 +196,67 @@ export const imageToBase64 = (file: File): Promise<string> => {
       reject(error);
     };
   });
+};
+
+// Función para añadir un producto a la tienda
+export const addProductToStore = (id: string): AdminProduct | null => {
+  const product = getAdminProductById(id);
+  
+  if (!product) {
+    return null;
+  }
+  
+  const updatedProduct: AdminProduct = {
+    ...product,
+    inStore: true,
+    updatedAt: Date.now()
+  };
+  
+  return updateAdminProduct(updatedProduct);
+};
+
+// Función para quitar un producto de la tienda
+export const removeProductFromStore = (id: string): AdminProduct | null => {
+  const product = getAdminProductById(id);
+  
+  if (!product) {
+    return null;
+  }
+  
+  const updatedProduct: AdminProduct = {
+    ...product,
+    inStore: false,
+    updatedAt: Date.now()
+  };
+  
+  return updateAdminProduct(updatedProduct);
+};
+
+// Función para obtener todos los productos en la tienda
+export const getStoreProducts = (): AdminProduct[] => {
+  const products = getAdminProducts();
+  return products.filter(product => product.inStore === true);
+};
+
+// Función para obtener todos los productos que no están en la tienda
+export const getNonStoreProducts = (): AdminProduct[] => {
+  const products = getAdminProducts();
+  return products.filter(product => product.inStore !== true);
+};
+
+// Función para alternar el estado inStore de un producto
+export const toggleProductInStore = (id: string): AdminProduct | null => {
+  const product = getAdminProductById(id);
+  
+  if (!product) {
+    return null;
+  }
+  
+  const updatedProduct: AdminProduct = {
+    ...product,
+    inStore: !product.inStore,
+    updatedAt: Date.now()
+  };
+  
+  return updateAdminProduct(updatedProduct);
 };

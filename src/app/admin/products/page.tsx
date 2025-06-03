@@ -4,10 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useUserRole } from '@/context/UserRoleContext';
 import { AdminProduct } from '@/types/product';
-import { getAdminProducts, deleteAdminProduct } from '@/services/adminProductService';
+import { 
+  getAdminProducts, 
+  deleteAdminProduct, 
+  toggleProductInStore
+} from '@/services/adminProductService';
 import { useRouter } from 'next/navigation';
-import Text from '@/components/commons/atoms/Text';
 import Button from '@/components/commons/atoms/Button';
+import Text from '@/components/commons/atoms/Text';
+import DataTable, { Column } from '@/components/commons/organisms/DataTable';
+import PriceFormatter from '@/components/commons/atoms/PriceFormatter';
+import DateFormatter from '@/components/commons/atoms/DateFormatter';
+import DescriptionCell from '@/components/commons/molecules/DescriptionCell';
+import StatusCell from '@/components/commons/molecules/StatusCell';
+import ProductActions from '@/components/commons/molecules/ProductActions';
 
 export default function AdminProductsPage() {
   const { resolvedTheme } = useTheme();
@@ -18,71 +28,101 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{value: string; label: string}[]>([]);
   
-  // Cargar productos al montar el componente
   useEffect(() => {
     loadProducts();
   }, []);
   
-  // Función para cargar productos
   const loadProducts = () => {
     setIsLoading(true);
     const adminProducts = getAdminProducts();
     setProducts(adminProducts);
+    
+    const uniqueCategories = [...new Set(adminProducts.map(p => p.category))]
+      .filter(category => category) 
+      .sort((a, b) => a.localeCompare(b, 'es')) 
+      .map(category => ({
+        value: category,
+        label: category
+      }));
+    
+    setCategories(uniqueCategories);
     setIsLoading(false);
   };
   
-  // Función para eliminar un producto
   const handleDeleteProduct = (id: string) => {
     deleteAdminProduct(id);
     setDeleteConfirmId(null);
     loadProducts();
   };
   
-  // Función para formatear fecha
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('es-CL', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleToggleInStore = (id: string) => {
+    const product = toggleProductInStore(id);
+    if (product) {
+      loadProducts();
+    }
+  };
+
+  const handleEditProduct = (id: string) => {
+    router.push(`/customize?productId=${id}`);
   };
   
-  // Función para formatear precio
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
-    });
-  };
+  const columns: Column<AdminProduct>[] = [
+    {
+      id: 'id',
+      header: 'ID',
+      accessor: 'id',
+    },
+    {
+      id: 'name',
+      header: 'Nombre',
+      accessor: 'name',
+    },
+    {
+      id: 'description',
+      header: 'Descripción',
+      accessor: (product) => <DescriptionCell description={product.description} />,
+    },
+    {
+      id: 'price',
+      header: 'Precio',
+      accessor: (product) => <PriceFormatter amount={product.price} />,
+    },
+    {
+      id: 'status',
+      header: 'Estado',
+      accessor: (product) => <StatusCell inStore={product.inStore} />,
+    },
+    {
+      id: 'createdAt',
+      header: 'Creado',
+      accessor: (product) => <DateFormatter timestamp={product.createdAt} format="short" />,
+    },
+  ];
   
-  // Si el usuario no es administrador, redirigir a la página principal
-  if (!isAdmin) {
+  // Función para renderizar acciones para cada producto
+  const renderActions = (product: AdminProduct) => {
+    const isDeleting = deleteConfirmId === product.id;
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <Text variant="h2" className="mb-4 text-center">Acceso Restringido</Text>
-        <Text variant="body" className="mb-6 text-center">
-          Esta página está reservada para administradores.
-        </Text>
-        <Button 
-          variant="primary"
-          onClick={() => router.push('/')}
-        >
-          Volver al Inicio
-        </Button>
-      </div>
+      <ProductActions 
+        product={product} 
+        onEdit={() => handleEditProduct(product.id)} 
+        onDelete={() => handleDeleteProduct(product.id)} 
+        onToggleStore={() => handleToggleInStore(product.id)}
+        isDeleting={isDeleting}
+        onCancelDelete={() => isDeleting ? setDeleteConfirmId(null) : setDeleteConfirmId(product.id)}
+      />
     );
-  }
-  
+  };
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto pt-24 pb-8 px-4">
         <div className="flex justify-between items-center mb-8">
           <div>
             <Text variant="h1" className="mb-2">Administración de Productos</Text>
-            <Text variant="body" className="text-gray-500 dark:text-gray-400">
+            <Text variant="body" className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Gestiona los productos disponibles en la tienda
             </Text>
           </div>
@@ -94,14 +134,18 @@ export default function AdminProductsPage() {
           </Button>
         </div>
         
-        {isLoading ? (
+        {!isAdmin ? (
+          <div className={`border-l-4 p-4 mb-6 ${isDarkMode ? 'bg-yellow-900 border-yellow-600 text-yellow-200' : 'bg-yellow-100 border-yellow-500 text-yellow-700'}`}>
+            <p>No tienes permisos de administrador para gestionar productos.</p>
+          </div>
+        ) : isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : products.length === 0 ? (
           <div className={`rounded-lg border p-8 text-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
             <Text variant="h3" className="mb-4">No hay productos</Text>
-            <Text variant="body" className="mb-6 text-gray-500 dark:text-gray-400">
+            <Text variant="body" className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Aún no has creado ningún producto. Comienza creando tu primer diseño.
             </Text>
             <Button 
@@ -112,124 +156,17 @@ export default function AdminProductsPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {products.map(product => (
-              <div 
-                key={product.id} 
-                className={`rounded-lg border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
-              >
-                <div className="flex flex-col md:flex-row">
-                  {/* Miniatura del producto */}
-                  <div className="md:w-48 h-48 flex-shrink-0">
-                    {product.thumbnail ? (
-                      <img 
-                        src={product.thumbnail} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                        <span className="text-gray-400">Sin imagen</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Información del producto */}
-                  <div className="p-4 flex-grow">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <Text variant="h3" className="mb-1">{product.name}</Text>
-                        <Text variant="body" className="text-gray-500 dark:text-gray-400 mb-2">
-                          {product.category} • {formatPrice(product.price)}
-                        </Text>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => router.push(`/customize?productId=${product.id}`)}
-                        >
-                          Editar
-                        </Button>
-                        {deleteConfirmId === product.id ? (
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="primary"
-                              size="sm"
-                              onClick={() => handleDeleteProduct(product.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Confirmar
-                            </Button>
-                            <Button 
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setDeleteConfirmId(null)}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button 
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setDeleteConfirmId(product.id)}
-                            className="text-red-600 border-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <Text variant="body" className="mt-2 line-clamp-2">
-                      {product.description}
-                    </Text>
-                    
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Creado: {formatDate(product.createdAt)}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Actualizado: {formatDate(product.updatedAt)}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <Text variant="body" className="text-sm font-medium mb-2">
-                        Colores disponibles:
-                      </Text>
-                      <div className="flex flex-wrap gap-1">
-                        {product.availableColors.map((color, index) => (
-                          <div 
-                            key={index}
-                            className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600"
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <Text variant="body" className="text-sm font-medium mb-2">
-                        Tallas disponibles:
-                      </Text>
-                      <div className="flex flex-wrap gap-1">
-                        {product.availableSizes.map((size, index) => (
-                          <div 
-                            key={index}
-                            className={`px-2 py-1 text-xs rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
-                          >
-                            {size}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className={`rounded-lg shadow-md overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <DataTable 
+              columns={columns} 
+              data={products} 
+              keyExtractor={(item) => item.id}
+              actions={renderActions}
+              searchFields={['name', 'description', 'category'] as (keyof AdminProduct)[]}
+              filterOptions={categories}
+              filterField={'category' as keyof AdminProduct}
+              className="rounded-lg shadow-lg overflow-hidden"
+            />
           </div>
         )}
       </div>

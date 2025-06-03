@@ -551,8 +551,6 @@ const CustomizeHTML = () => {
         description: formData.admin?.description ?? 'Sin descripción',
         category: formData.admin?.category ?? 'Sin categoría',
         price: calculateTotalPrice(),
-        availableColors: [getSelectedColorHex()],
-        availableSizes: [formData.size],
         thumbnail: thumbnailUrl || '',
         angles: {
           front: getAngleDesign('front'),
@@ -812,8 +810,10 @@ const CustomizeHTML = () => {
       const loadedProduct = getAdminProductById(productId);
       if (loadedProduct) {
         // Cargar datos del producto en el formulario
-        setValue('color', colorOptions.find(c => c.value === loadedProduct.availableColors[0])?.id ?? 'white');
-        setValue('size', loadedProduct.availableSizes[0] ?? 'M');
+        // Usamos un color predeterminado ya que no guardamos colores específicos
+        setValue('color', 'white');
+        // Usamos una talla predeterminada ya que no guardamos tallas específicas
+        setValue('size', 'M');
         setValue('basePrice', loadedProduct.price);
         
         // Cargar campos de administrador

@@ -48,15 +48,14 @@ export interface AdminProduct {
     right: AngleDesign;
   };
   
-  // Configuraciones disponibles
-  availableColors: string[];  // Colores disponibles (códigos hexadecimales)
-  availableSizes: string[];   // Tallas disponibles (XS, S, M, L, XL, etc.)
-  
   // Categoría del producto
   category: string;     // Categoría del producto (ej: "Urbano", "Minimalista", etc.)
   
   // Imagen de miniatura para mostrar en la tienda
   thumbnail?: string;   // URL o data URL de la miniatura
+  
+  // Indica si el producto está publicado en la tienda
+  inStore?: boolean;    // true si está en la tienda, false si no está publicado
 }
 
 // Tipo para el estado de productos en localStorage
