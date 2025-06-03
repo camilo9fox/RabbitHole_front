@@ -389,13 +389,15 @@ export default function ProductDetail() {
           {/* Columna izquierda: Imágenes del producto */}
           <div className="space-y-8">
             {/* Canvas del producto con colorización dinámica */}
-            <ProductCanvas 
-              key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`} // Usar contador estable en lugar de timestamp
-              angle={currentAngle}
-              color={selectedColor ?? '#FFFFFF'}
-              className="w-full max-w-lg mx-auto"
-              design={getDesignForAngle(currentAngle)}
-            />
+            <div className="h-[650px] w-full flex items-center justify-center">
+              <ProductCanvas 
+                key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`} // Usar contador estable en lugar de timestamp
+                angle={currentAngle}
+                color={selectedColor ?? '#FFFFFF'}
+                className="w-full h-full max-w-2xl mx-auto"
+                design={getDesignForAngle(currentAngle)}
+              />
+            </div>
             
             {/* Selector de ángulos */}
             {renderAngleSelector()}
