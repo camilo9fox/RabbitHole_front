@@ -75,7 +75,16 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   const [tshirtImg, setTshirtImg] = useState<HTMLImageElement | null>(null);
   const [userImg, setUserImg] = useState<HTMLImageElement | null>(null);
   const [designImg, setDesignImg] = useState<HTMLImageElement | null>(null);
+  // IMPORTANTE: Mantener un tamaño FIJO para el canvas (500x600) para asegurar que las coordenadas
+  // sean exactamente iguales entre la página de producto y el customizer
   const [canvasSize, setCanvasSize] = useState({ width: 500, height: 600 });
+  
+  // Efecto para mantener un tamaño fijo del canvas (500x600)
+  useEffect(() => {
+    // Fijar el tamaño del canvas a 500x600 px
+    setCanvasSize({ width: 500, height: 600 });
+    console.log('HTMLCanvasV2: Canvas fijado a tamaño constante: 500 x 600');
+  }, []);
   const [textPosition, setTextPosition] = useState<Position>({ x: textPositionX, y: textPositionY });
   const [imagePosition, setImagePosition] = useState<Position>({ x: imagePositionX, y: imagePositionY });
   const [imageSize, setImageSize] = useState<Size>({ width: imageWidth, height: imageHeight });
@@ -871,50 +880,6 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     }
   }, [isDragging, isResizing, dragTarget, dragOffset, resizeHandle, startSize, imagePosition, userImg, customText, imageSize, textFont, textSize]);
   
-  const handleTouchEnd = useCallback(() => {
-    // Usar la misma lógica que handleMouseUp
-    if (isResizing && onUpdateImageSize) {
-      onUpdateImageSize(imageSize.width, imageSize.height);
-    }
-    
-    if (isDragging && dragTarget === 'text' && onUpdateTextPosition) {
-      onUpdateTextPosition(textPosition.x, textPosition.y);
-    }
-    
-    if (isDragging && dragTarget === 'image' && onUpdateImagePosition) {
-      onUpdateImagePosition(imagePosition.x, imagePosition.y);
-    }
-    
-    setIsDragging(false);
-    setIsResizing(false);
-    setResizeHandle(null);
-    setDragTarget(null);
-    
-    // Forzar un redibujado final
-    requestAnimationFrame(() => {
-      if (canvasRef.current) {
-        drawCanvas();
-      }
-    });
-  }, [isResizing, isDragging, dragTarget, imageSize, textPosition, imagePosition, onUpdateImageSize, onUpdateTextPosition, onUpdateImagePosition, drawCanvas]);
-
-  // Efecto para el redimensionamiento de la ventana
-  useEffect(() => {
-    const handleResize = () => {
-      if (!containerRef.current) return;
-
-      const containerWidth = containerRef.current.clientWidth;
-      const newWidth = Math.min(500, containerWidth - 20); // 20px de margen
-      const newHeight = (newWidth * 6) / 5; // Mantener proporción 5:6
-
-      setCanvasSize({ width: newWidth, height: newHeight });
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
   // Efecto para redibujar el canvas cuando cambian estados relevantes
   useEffect(() => {
     if (canvasRef.current) {
@@ -945,6 +910,38 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     designText?.font,
     designText?.color
   ]);
+
+  const handleTouchEnd = useCallback(() => {
+    // Usar la misma lógica que handleMouseUp
+    if (isResizing && onUpdateImageSize) {
+      onUpdateImageSize(imageSize.width, imageSize.height);
+    }
+    
+    if (isDragging && dragTarget === 'text' && onUpdateTextPosition) {
+      onUpdateTextPosition(textPosition.x, textPosition.y);
+    }
+    
+    if (isDragging && dragTarget === 'image' && onUpdateImagePosition) {
+      onUpdateImagePosition(imagePosition.x, imagePosition.y);
+    }
+    
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
+    setDragTarget(null);
+    
+    // Forzar un redibujado final
+    requestAnimationFrame(() => {
+      if (canvasRef.current) {
+        drawCanvas();
+      }
+    });
+  }, [isResizing, isDragging, dragTarget, imageSize, textPosition, imagePosition, onUpdateImageSize, onUpdateTextPosition, onUpdateImagePosition, drawCanvas, canvasRef]);
+
+  // Exponer la función captureCanvas a través de la ref
+  useImperativeHandle(ref, () => ({
+    captureCanvas
+  }));
 
   return (
     <div ref={containerRef} className="w-full relative flex flex-col items-center overflow-hidden">
@@ -977,7 +974,6 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   );
 });
 
-// ...
 // Asignar un displayName para las herramientas de desarrollo
 HTMLCanvasV2.displayName = 'HTMLCanvasV2';
 
