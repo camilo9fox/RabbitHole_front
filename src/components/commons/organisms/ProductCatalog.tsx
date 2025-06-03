@@ -186,7 +186,7 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
                 image={product.image}
                 title={product.name}
                 price={product.price}
-                rating={product.rating}
+                category={product.category}
                 width={600}
                 height={800}
                 onAddToCart={() => handleAddToCart(product.id)}

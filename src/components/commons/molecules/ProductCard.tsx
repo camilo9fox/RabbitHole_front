@@ -10,7 +10,7 @@ interface ProductCardProps {
   image: string;
   title: string;
   price: number;
-  rating?: number;
+  category: string;
   onAddToCart: () => void;
   width?: number;
   height?: number;
@@ -21,7 +21,7 @@ export const ProductCard = ({
   image,
   title,
   price,
-  rating,
+  category,
   onAddToCart,
   width = 600,
   height = 800
@@ -29,8 +29,8 @@ export const ProductCard = ({
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   
-  // Convertir precio a pesos chilenos (multiplicando por 850 como tasa de cambio aproximada)
-  const priceInCLP = Math.round(price * 850);
+  // Usar el precio real del producto
+  const priceInCLP = price;
   return (
     <Card className={`w-full max-w-sm ${!isDarkMode ? 'border border-gray-200 shadow-sm' : ''}`}>
       <Link href={`/product/${id}`} className="block">
@@ -49,33 +49,28 @@ export const ProductCard = ({
           </Text>
         </Link>
         
+        {/* Categoría del producto */}
+        <div className="flex items-center mb-3">
+          <div className="flex items-center">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
+              {category}
+            </span>
+          </div>
+        </div>
+        
         {/* Precio */}
-        <Text variant="h4" className="text-accent font-semibold mb-3">
+        <Text variant="h4" className="text-accent font-semibold mb-4">
           ${priceInCLP.toLocaleString('es-CL')} CLP
         </Text>
         
-        {/* Calificación con estrellas */}
-        {rating && (
-          <div className="flex items-center mb-4">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <Text variant="body" className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} ml-1`}>
-                {rating}
-              </Text>
-            </div>
-          </div>
-        )}
-        
-        {/* Botón de agregar al carrito */}
+        {/* Botón de ver más */}
         <Button
           variant="primary"
           size="md"
           onClick={onAddToCart}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
         >
-          Agregar al carrito
+          Ver más
         </Button>
 
       </div>

@@ -15,8 +15,7 @@ const adminProductToProduct = (adminProduct: AdminProduct): Product => {
     name: adminProduct.name,
     price: adminProduct.price,
     image: adminProduct.thumbnail ?? '/images/products/default.png',
-    category: adminProduct.category,
-    rating: 5
+    category: adminProduct.category
   };
 };
 
