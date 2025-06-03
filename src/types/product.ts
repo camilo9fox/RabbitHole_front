@@ -56,6 +56,12 @@ export interface AdminProduct {
   
   // Indica si el producto está publicado en la tienda
   inStore?: boolean;    // true si está en la tienda, false si no está publicado
+  
+  // Colores disponibles para el producto
+  colors?: string[];    // Lista de colores disponibles en formato hexadecimal
+  
+  // Tallas disponibles para el producto
+  sizes?: string[];     // Lista de tallas disponibles (ej: "S", "M", "L", "XL")
 }
 
 // Tipo para el estado de productos en localStorage

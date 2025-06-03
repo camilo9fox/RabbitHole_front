@@ -11,7 +11,6 @@ interface ProductCardProps {
   title: string;
   price: number;
   category: string;
-  onAddToCart: () => void;
   width?: number;
   height?: number;
 }
@@ -22,7 +21,6 @@ export const ProductCard = ({
   title,
   price,
   category,
-  onAddToCart,
   width = 600,
   height = 800
 }: ProductCardProps) => {
@@ -64,14 +62,15 @@ export const ProductCard = ({
         </Text>
         
         {/* Botón de ver más */}
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onAddToCart}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
-        >
-          Ver más
-        </Button>
+        <Link href={`/product/${id}`} className="block w-full">
+          <Button
+            variant="primary"
+            size="md"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
+          >
+            Ver más
+          </Button>
+        </Link>
 
       </div>
     </Card>

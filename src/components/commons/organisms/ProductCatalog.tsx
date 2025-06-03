@@ -51,19 +51,7 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
     ? products 
     : products.filter(product => product.category === selectedCategory);
 
-  const handleAddToCart = (productId: string) => {
-    console.log(`Producto agregado al carrito: ${productId}`);
-    // Aquí iría la lógica para agregar al carrito
-    
-    // Animación al agregar al carrito
-    gsap.to('.cart-icon', {
-      scale: 1.2,
-      duration: 0.3,
-      yoyo: true,
-      repeat: 1,
-      ease: 'back.out'
-    });
-  };
+  // La función handleAddToCart ha sido eliminada ya que ahora usamos enlaces directos a la página de producto
   
   // Inicializar animaciones
   useEffect(() => {
@@ -189,7 +177,6 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
                 category={product.category}
                 width={600}
                 height={800}
-                onAddToCart={() => handleAddToCart(product.id)}
               />
             </div>
           ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { DesignImage, DesignText } from '@/types/product';
 
 // Definir la interfaz para las referencias imperativas
 export interface HTMLCanvasHandle {
@@ -26,6 +27,8 @@ interface HTMLCanvasProps {
   onUpdateTextSize?: (size: number) => void;
   onUpdateImageSize?: (width: number, height: number) => void;
   useColorization?: boolean; // Indica si se debe usar la coloración dinámica
+  designImage?: DesignImage; // Imagen de diseño agregada por el admin
+  designText?: DesignText; // Texto de diseño agregado por el admin
 }
 
 interface Position {
@@ -60,7 +63,9 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   onUpdateTextPosition,
   onUpdateImagePosition,
   onUpdateTextSize,
-  onUpdateImageSize
+  onUpdateImageSize,
+  designImage,
+  designText
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -69,6 +74,7 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   
   const [tshirtImg, setTshirtImg] = useState<HTMLImageElement | null>(null);
   const [userImg, setUserImg] = useState<HTMLImageElement | null>(null);
+  const [designImg, setDesignImg] = useState<HTMLImageElement | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 500, height: 600 });
   const [textPosition, setTextPosition] = useState<Position>({ x: textPositionX, y: textPositionY });
   const [imagePosition, setImagePosition] = useState<Position>({ x: imagePositionX, y: imagePositionY });
@@ -163,8 +169,11 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     if (!ctx) return;
     
     // Limpiar el canvas y dibujar un fondo gris para mejor contraste
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    console.log('Dibujando canvas con imagen:', tshirtImg ? 'cargada' : 'no cargada');
     
     // Dibujar la imagen de la polera
     if (tshirtImg) {
@@ -226,6 +235,47 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
       }
     }
     
+    // Dibujar la imagen de diseño si existe
+    if (designImg) {
+      ctx.save();
+      
+      // Usar las coordenadas y tamaño del diseño si están disponibles, o valores predeterminados
+      const x = designImage?.position?.x ?? canvas.width / 2;
+      const y = designImage?.position?.y ?? canvas.height / 2;
+      const width = designImage?.size?.width ?? 100;
+      const height = designImage?.size?.height ?? 100;
+      
+      ctx.translate(x, y);
+      ctx.drawImage(
+        designImg,
+        -width / 2,
+        -height / 2,
+        width,
+        height
+      );
+      
+      ctx.restore();
+    }
+      
+    // Dibujar el texto de diseño si existe
+    if (designText?.content) {
+      ctx.save();
+      
+      const x = designText?.position?.x ?? canvas.width / 2;
+      const y = designText?.position?.y ?? canvas.height / 2;
+      const fontSize = designText?.size ?? 20;
+      const fontFamily = designText?.font ?? 'Arial';
+      const color = designText?.color ?? '#000000';
+      
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(designText.content, x, y);
+      
+      ctx.restore();
+    }
+      
     // Dibujar la imagen personalizada
     if (userImg) {
       ctx.save();
@@ -580,18 +630,45 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
   }, [customText, userImg, textSize, onUpdateTextSize]);
   
   // Cargar imágenes cuando cambian las props
+  // Efecto para cargar la imagen de la polera
   useEffect(() => {
     if (tshirtImage) {
+      console.log('Cargando imagen de polera:', tshirtImage);
       const img = new Image();
+      img.crossOrigin = 'anonymous'; // Importante para evitar problemas CORS
       img.src = tshirtImage;
       img.onload = () => {
+        console.log('Imagen de polera cargada correctamente');
         setTshirtImg(img);
       };
+      img.onerror = (err) => {
+        console.error('Error al cargar la imagen de la polera:', err);
+      };
     }
-    
-    // No se requiere máscara para la coloración simplificada
-    
+  }, [tshirtImage]);
+
+  // Efecto para cargar la imagen de diseño
+  useEffect(() => {
+    if (designImage?.src) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        console.log('Imagen de diseño cargada:', designImage.src);
+        setDesignImg(img);
+      };
+      img.onerror = (err) => {
+        console.error('Error al cargar la imagen de diseño:', err);
+      };
+      img.src = designImage.src;
+    } else {
+      setDesignImg(null);
+    }
+  }, [designImage?.src]);
+
+  // Efecto para cargar la imagen personalizada
+  useEffect(() => {
     if (customImage) {
+      console.log('Cargando imagen personalizada:', customImage);
       const img = new Image();
       img.src = customImage;
       img.onload = () => {
@@ -853,7 +930,20 @@ const HTMLCanvasV2 = forwardRef<HTMLCanvasHandle, HTMLCanvasProps>(({
     customText, 
     tshirtImg, 
     userImg, 
-    tshirtColor
+    designImg,
+    designText,
+    tshirtColor,
+    // Agregar dependencias faltantes
+    designImage?.position?.x,
+    designImage?.position?.y,
+    designImage?.size?.width,
+    designImage?.size?.height,
+    designText?.content,
+    designText?.position?.x,
+    designText?.position?.y,
+    designText?.size,
+    designText?.font,
+    designText?.color
   ]);
 
   return (
