@@ -15,7 +15,7 @@ import { useUserRole } from '@/context/UserRoleContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminProductForm from '@/components/commons/organisms/AdminProductForm';
 import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail } from '@/services/adminProductService';
-import { AdminProduct, AngleDesign } from '@/types/product';
+import { AngleDesign } from '@/types/product';
 // Los tipos se usan en la función saveAdminProduct
 import { toast } from 'react-hot-toast';
 
@@ -487,6 +487,14 @@ const CustomizeHTML = () => {
     return selectedColorOption?.value || '#FFFFFF';
   };
 
+  // Función para verificar si un ángulo tiene diseño (imagen o texto)
+  const hasCustomizationInView = (view: 'front' | 'back' | 'left' | 'right'): boolean => {
+    return !!(formValues[view].text || formValues[view].image);
+  };
+
+  // Definir un tipo para las vistas de la polera
+  type TshirtView = 'front' | 'back' | 'left' | 'right';
+
   // Función para guardar producto (admin) o agregar al carrito (usuario)
   const handleFormSubmit = async () => {
     console.log('Iniciando handleFormSubmit');
@@ -502,90 +510,148 @@ const CustomizeHTML = () => {
     console.log('Formulario válido, continuando...');
     
     if (isAdmin) {
-      // Obtener el canvas actual para generar la miniatura
-      console.log('Buscando canvas-front...');
-      console.log('Elementos con id canvas-front:', document.querySelectorAll('#canvas-front'));
+      // Verificar qué vistas tienen personalización
+      const frontHasCustomization = hasCustomizationInView('front');
+      const backHasCustomization = hasCustomizationInView('back');
+      const leftHasCustomization = hasCustomizationInView('left');
+      const rightHasCustomization = hasCustomizationInView('right');
       
-      // Intentar obtener el canvas de varias formas
-      let frontCanvas = document.getElementById('canvas-front') as HTMLCanvasElement;
-      
-      if (!frontCanvas) {
-        console.log('No se encontró el canvas por ID, intentando con querySelector');
-        frontCanvas = document.querySelector('canvas#canvas-front') as HTMLCanvasElement;
-      }
-      
-      if (!frontCanvas) {
-        console.log('No se encontró el canvas por querySelector, intentando con cualquier canvas');
-        frontCanvas = document.querySelector('canvas') as HTMLCanvasElement;
-      }
-      
-      if (!frontCanvas) {
-        console.error('No se pudo encontrar ningún canvas en el documento');
-        toast.error('Error al generar la miniatura: No se encontró el canvas');
+      // Verificar si hay al menos una vista personalizada
+      if (!frontHasCustomization && !backHasCustomization && !leftHasCustomization && !rightHasCustomization) {
+        toast.error('Por favor, personaliza al menos una vista antes de guardar el producto.');
         return;
       }
       
-      console.log('Canvas encontrado:', frontCanvas);
-      console.log('Dimensiones del canvas:', frontCanvas.width, 'x', frontCanvas.height);
+      // Guardar la vista actual para volver a ella al final
+      const currentViewValue = formValues.view as TshirtView;
       
-      // Generar miniatura desde el canvas frontal
-      const thumbnailUrl = generateThumbnail(frontCanvas);
-      console.log('Miniatura generada:', thumbnailUrl ? 'Generada correctamente' : 'Error al generar');
-      
-      // Obtener datos del formulario
-      const formData = methods.getValues();
-      console.log('Datos del formulario:', formData);
-      console.log('Valor de admin:', formData.admin);
-      
-      // Asegurarse de que los campos admin existan
-      if (!formData.admin) {
-        console.error('Los campos admin no existen en el formulario');
-        toast.error('Error: Faltan los campos de administrador');
-        return;
+      // Determinar qué vista mostrar según prioridad (front > back > left > right)
+      let viewToShow: TshirtView = 'front';
+      if (frontHasCustomization) {
+        viewToShow = 'front';
+      } else if (backHasCustomization) {
+        viewToShow = 'back';
+      } else if (leftHasCustomization) {
+        viewToShow = 'left';
+      } else if (rightHasCustomization) {
+        viewToShow = 'right';
       }
       
-      // Crear objeto de producto con validación adicional
-      const productData: AdminProduct = {
-        id: productId ?? Date.now().toString(),
-        name: formData.admin?.name ?? 'Producto sin nombre',
-        description: formData.admin?.description ?? 'Sin descripción',
-        category: formData.admin?.category ?? 'Sin categoría',
-        price: calculateTotalPrice(),
-        thumbnail: thumbnailUrl || '',
-        angles: {
-          front: getAngleDesign('front'),
-          back: getAngleDesign('back'),
-          left: getAngleDesign('left'),
-          right: getAngleDesign('right')
-        },
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+      // Cambiar a la vista con diseño para generar el thumbnail
+      setValue('view', viewToShow);
+      
+      // Función para generar un thumbnail a partir de un canvas
+      const generateThumbnailFromCanvas = async (canvasRef: React.RefObject<HTMLCanvasHandle | null>, canvasId: string): Promise<HTMLCanvasElement | null> => {
+        let canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+        if (!canvas && canvasRef.current) {
+          const imageUrl = canvasRef.current.captureCanvas();
+          if (imageUrl) {
+            canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              const img = document.createElement('img');
+              img.src = imageUrl;
+              await new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+              });
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0);
+              return canvas;
+            }
+          }
+        }
+        return canvas;
       };
       
-      // Guardar o actualizar el producto
-      console.log('Guardando producto:', productData);
-      try {
-        if (productId) {
-          updateAdminProduct(productData);
-          toast.success(`Producto "${productData.name}" actualizado correctamente`);
-        } else {
-          saveAdminProduct(productData);
-          toast.success(`Producto "${productData.name}" creado correctamente`);
+      // Esperar a que se actualice la vista
+      setTimeout(async () => {
+        // Obtener el canvas de la vista actual
+        let thumbnailCanvas: HTMLCanvasElement | null = null;
+        
+        try {
+          switch (viewToShow) {
+            case 'front':
+              thumbnailCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
+              break;
+            case 'back':
+              thumbnailCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
+              break;
+            case 'left':
+              thumbnailCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
+              break;
+            case 'right':
+              thumbnailCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
+              break;
+          }
+          
+          if (!thumbnailCanvas) {
+            toast.error(`Error al generar la miniatura: No se encontró el canvas para la vista ${viewToShow}`);
+            return;
+          }
+          
+          // Generar thumbnail
+          const thumbnailUrl = generateThumbnail(thumbnailCanvas);
+          console.log('Thumbnail generado desde la vista:', viewToShow);
+          
+          // Finalizar el guardado del producto con el thumbnail generado
+          finishProductSave(thumbnailUrl, currentViewValue);
+          
+        } catch (error) {
+          console.error('Error al generar el thumbnail:', error);
+          toast.error('Ocurrió un error al generar la miniatura del producto');
         }
-        console.log('Producto guardado correctamente');
-      } catch (error) {
-        console.error('Error al guardar el producto:', error);
-        toast.error('Error al guardar el producto');
-      }
-      
-      // Redireccionar a la lista de productos después de un breve retraso
-      // para asegurar que los datos se hayan guardado correctamente
-      setTimeout(() => {
-        router.push('/admin/products');
-      }, 1000); // Aumentamos el tiempo de espera para asegurar que se complete el guardado
+      }, 200);
     } else {
       // Lógica para agregar al carrito (usuarios normales)
       handleAddToCart();
+    }
+  };
+  
+  // Función para finalizar el guardado del producto con el thumbnail generado
+  const finishProductSave = (thumbnailUrl: string, originalView: TshirtView) => {
+    setValue('view', originalView);
+    const formData = methods.getValues();
+    if (!formData.admin) {
+      toast.error('Error: Faltan los campos de administrador');
+      return;
+    }
+    const productData = {
+      name: formData.admin.name,
+      description: formData.admin.description,
+      category: formData.admin.category,
+      price: totalPrice,
+      color: selectedColorOption.value,
+      size: selectedSizeOption.id,
+      thumbnail: thumbnailUrl,
+      angles: {
+        front: getAngleDesign('front'),
+        back: getAngleDesign('back'),
+        left: getAngleDesign('left'),
+        right: getAngleDesign('right')
+      },
+      baseColor: formData.color
+    };
+    try {
+      if (productId) {
+        const existingProduct = getAdminProductById(productId);
+        if (!existingProduct) {
+          toast.error('No se encontró el producto a actualizar');
+          return;
+        }
+        const updatedProduct = { ...existingProduct, ...productData, id: productId };
+        updateAdminProduct(updatedProduct);
+        toast.success('Producto actualizado correctamente');
+      } else {
+        saveAdminProduct(productData);
+        toast.success('Producto creado correctamente');
+      }
+      setTimeout(() => {
+        router.push('/admin/products');
+      }, 500); // Pequeño retraso para asegurar que se complete el guardado
+    } catch (error: unknown) {
+      console.error('Error al guardar producto:', error);
+      toast.error(productId ? 'Error al actualizar el producto' : 'Error al crear el producto');
     }
   };
 
