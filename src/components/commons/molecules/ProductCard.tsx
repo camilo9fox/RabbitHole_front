@@ -11,8 +11,6 @@ interface ProductCardProps {
   title: string;
   price: number;
   category: string;
-  width?: number;
-  height?: number;
 }
 
 export const ProductCard = ({
@@ -20,9 +18,7 @@ export const ProductCard = ({
   image,
   title,
   price,
-  category,
-  width = 600,
-  height = 800
+  category
 }: ProductCardProps) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
@@ -30,36 +26,42 @@ export const ProductCard = ({
   // Usar el precio real del producto
   const priceInCLP = price;
   return (
-    <Card className={`w-full max-w-sm ${!isDarkMode ? 'border border-gray-200 shadow-sm' : ''}`}>
-      <Link href={`/product/${id}`} className="block">
-        <Image
-          src={image}
-          alt={title}
-          width={width}
-          height={height}
-          className="w-full h-64 object-cover"
-        />
+    <Card className={`w-full max-w-lg ${!isDarkMode ? 'border border-gray-200 shadow-lg' : 'border border-gray-700'} rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl`}>
+      <Link href={`/product/${id}`} className="block overflow-hidden">
+        <div className="relative overflow-hidden h-96 bg-gray-100 dark:bg-gray-800">
+          <Image
+            src={image}
+            alt={title}
+            width={1200}
+            height={1200}
+            className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
+            unoptimized={true}
+          />
+        </div>
       </Link>
-      <div className="p-4">
+      <div className="p-6">
         <Link href={`/product/${id}`} className="block">
-          <Text variant="h3" className={`${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+          <Text variant="h3" className={`${isDarkMode ? 'text-white' : 'text-gray-800'} text-xl font-bold mb-3 hover:text-accent transition-colors duration-200`}>
             {title}
           </Text>
         </Link>
         
-        {/* Categoría del producto */}
-        <div className="flex items-center mb-3">
-          <div className="flex items-center">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
-              {category}
-            </span>
-          </div>
+        {/* Categoría del producto - Badge más grande y visible con texto negro */}
+        <div className="absolute top-5 left-5 z-10">
+          <span className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold bg-yellow-300 text-black shadow-lg border border-yellow-400">
+            {category}
+          </span>
         </div>
         
-        {/* Precio */}
-        <Text variant="h4" className="text-accent font-semibold mb-4">
-          ${priceInCLP.toLocaleString('es-CL')} CLP
-        </Text>
+        {/* Precio con mejor diseño */}
+        <div className="flex items-center justify-between mb-5">
+          <Text variant="h4" className="text-2xl font-bold text-accent">
+            ${priceInCLP.toLocaleString('es-CL')}
+          </Text>
+          <Text variant="small" className="text-xs text-gray-500 dark:text-gray-400">
+            CLP
+          </Text>
+        </div>
         
         {/* Botón de ver más */}
         <Link href={`/product/${id}`} className="block w-full">

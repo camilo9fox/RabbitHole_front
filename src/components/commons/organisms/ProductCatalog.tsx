@@ -159,8 +159,8 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
           ))}
         </div>
         
-        {/* Grid de productos */}
-        <div ref={productsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {/* Grid de productos - Menos columnas para tarjetas más anchas */}
+        <div ref={productsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-10">
           {filteredProducts.map((product, index) => (
             <div 
               key={product.id} 
@@ -175,8 +175,6 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
                 title={product.name}
                 price={product.price}
                 category={product.category}
-                width={600}
-                height={800}
               />
             </div>
           ))}

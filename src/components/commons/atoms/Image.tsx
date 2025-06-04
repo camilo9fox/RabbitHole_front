@@ -7,6 +7,7 @@ interface ImageProps {
   width?: number;
   height?: number;
   className?: string;
+  unoptimized?: boolean;
 }
 
 const CustomImage = forwardRef<HTMLImageElement, ImageProps>(
@@ -17,9 +18,10 @@ const CustomImage = forwardRef<HTMLImageElement, ImageProps>(
           ref={ref}
           src={src}
           alt={alt}
-          width={width}
-          height={height}
-          className={`object-cover ${className}`}
+          width={width ?? 1200}
+          height={height ?? 1200}
+          className={`object-cover ${className ?? ''}`}
+          unoptimized={props.unoptimized ?? false}
           {...props}
         />
       </div>
