@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ProductCard } from '@/components/commons/molecules/ProductCard';
+import ProductCardCanvas from '@/components/commons/molecules/ProductCardCanvas';
 import Text from '@/components/commons/atoms/Text';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -13,6 +13,7 @@ export interface Product {
   image: string;
   price: number;
   category: string;
+  color?: string;
   rating?: number;
 }
 
@@ -169,12 +170,14 @@ const ProductCatalog = ({ title, subtitle, products, className = '' }: ProductCa
               }}
               className="transform transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1"
             >
-              <ProductCard
+              <ProductCardCanvas
                 id={product.id}
                 image={product.image}
                 title={product.name}
                 price={product.price}
                 category={product.category}
+                color={product.color ?? '#FFFFFF'} // Pasamos el color o blanco por defecto
+                angle="frente" // Siempre usamos el ángulo frontal en el catálogo
               />
             </div>
           ))}

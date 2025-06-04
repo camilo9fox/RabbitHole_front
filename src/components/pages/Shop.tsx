@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ShopBanner from '@/components/commons/molecules/ShopBanner';
 import ProductCatalog, { Product } from '@/components/commons/organisms/ProductCatalog';
 import ProductFilters from '@/components/commons/molecules/ProductFilters';
@@ -30,58 +30,100 @@ export default function Shop() {
   const [categoryOptions, setCategoryOptions] = useState<{id: string; label: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Referencia para evitar actualizaciones innecesarias
-  const isInitialMount = useRef(true);
-  
-  // Cargar productos publicados desde el administrador
-  useEffect(() => {
-    // Solo cargar productos una vez al montar el componente
-    if (!isInitialMount.current) return;
+  // Función para cargar productos
+  const loadProducts = useCallback(() => {
+    setIsLoading(true);
     
-    const loadProducts = () => {
-      setIsLoading(true);
+    try {
+      // Obtener productos publicados en la tienda
+      const adminProducts = getStoreProducts();
       
-      try {
-        // Obtener productos publicados en la tienda
-        const adminProducts = getStoreProducts();
-        
-        // Convertir productos de administrador a formato de tienda
-        const shopProducts = adminProducts.map(adminProductToProduct);
-        
-        // Calcular el rango de precios basado en los productos disponibles
-        let minPrice = 0;
-        let maxPrice = 100;
-        
-        if (shopProducts.length > 0) {
-          const prices = shopProducts.map(p => p.price);
-          minPrice = Math.floor(Math.min(...prices));
-          maxPrice = Math.ceil(Math.max(...prices));
-        }
-        
-        // Extraer categorías únicas de los productos
-        const uniqueCategories = [...new Set(adminProducts.map(p => p.category))]
-          .filter(category => category) 
-          .sort((a, b) => a.localeCompare(b, 'es'))
-          .map(category => ({
-            id: category,
-            label: category
-          }));
-        
-        // Actualizar estados de forma segura
-        setProducts(shopProducts);
-        setPriceRange([minPrice, maxPrice]);
-        setCategoryOptions(uniqueCategories);
-      } catch (error) {
-        console.error('Error al cargar productos:', error);
-      } finally {
-        setIsLoading(false);
-        isInitialMount.current = false;
+      // Convertir productos de administrador a formato de tienda
+      const shopProducts = adminProducts.map(adminProductToProduct);
+      
+      // Calcular el rango de precios basado en los productos disponibles
+      let minPrice = 0;
+      let maxPrice = 100;
+      
+      if (shopProducts.length > 0) {
+        const prices = shopProducts.map(p => p.price);
+        minPrice = Math.floor(Math.min(...prices));
+        maxPrice = Math.ceil(Math.max(...prices));
+      }
+      
+      // Extraer categorías únicas de los productos
+      const uniqueCategories = [...new Set(adminProducts.map(p => p.category))]
+        .filter(category => category) 
+        .sort((a, b) => a.localeCompare(b, 'es'))
+        .map(category => ({
+          id: category,
+          label: category
+        }));
+      
+      // Actualizar estados
+      setProducts(shopProducts);
+      setPriceRange([minPrice, maxPrice]);
+      setCategoryOptions(uniqueCategories);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+
+  // Crear un evento personalizado para comunicación entre páginas
+  useEffect(() => {
+    // Definir un evento personalizado para actualizar productos
+    const customEvent = new Event('productUpdated');
+    
+    // Sobrescribir el método setItem de localStorage para detectar cambios en productos
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key, value) {
+      // Llamar al método original
+      originalSetItem.apply(this, [key, value]);
+      
+      // Si la clave está relacionada con productos, disparar evento
+      if (key && (key.includes('product') || key.includes('Product'))) {
+        console.log('Detectado cambio en localStorage para productos');
+        window.dispatchEvent(customEvent);
       }
     };
     
-    // Cargar productos
-    loadProducts();
+    // Limpiar al desmontar
+    return () => {
+      localStorage.setItem = originalSetItem;
+    };
   }, []);
+
+  // Cargar productos cuando el componente se monta o cuando se navega a la página
+  useEffect(() => {
+    // Cargar productos inicialmente
+    loadProducts();
+    
+    // Función para manejar cambios en localStorage
+    const handleProductUpdated = () => {
+      console.log('Evento productUpdated detectado, recargando productos...');
+      loadProducts();
+    };
+    
+    // Función para recargar productos al volver a la página
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Página visible, recargando productos...');
+        loadProducts();
+      }
+    };
+    
+    // Agregar listeners
+    window.addEventListener('productUpdated', handleProductUpdated);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('productUpdated', handleProductUpdated);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadProducts]);
   
   // Función para manejar cambios en las categorías seleccionadas (memoizada)
   const handleCategoryChange = useCallback((categoryId: string) => {
