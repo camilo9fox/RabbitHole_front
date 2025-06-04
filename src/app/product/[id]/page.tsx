@@ -8,6 +8,8 @@ import Text from '@/components/commons/atoms/Text';
 import Button from '@/components/commons/atoms/Button';
 import { useTheme } from 'next-themes';
 import ProductCanvas from '@/components/commons/molecules/ProductCanvas';
+import { useCart } from '@/context/CartContext';
+import { StandardProduct } from '@/types/cart';
 
 // Ángulos disponibles para la visualización del producto
 const ANGLES = ['frente', 'espalda', 'izquierda', 'derecha'];
@@ -45,6 +47,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
+  const { addStandardItem } = useCart();
   
   // Estados
   const [product, setProduct] = useState<AdminProduct | null>(null);
@@ -144,25 +147,38 @@ export default function ProductDetail() {
     return design;
   };
 
+  // Estado para la notificación de éxito
+  const [showNotification, setShowNotification] = useState(false);
+  
   // Agregar al carrito
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || !selectedColor || !selectedSize) return;
     
-    const cartItem = {
-      productId: product.id,
+    // Crear un objeto StandardProduct compatible con el contexto del carrito
+    const standardProduct: StandardProduct = {
+      id: product.id,
       name: product.name,
+      description: product.description ?? '',
       price: product.price,
+      images: [product.thumbnail ?? ''],
       color: selectedColor,
       size: selectedSize,
-      quantity,
-      image: product.thumbnail ?? '',
+      category: product.category ?? 'Poleras',
+      inStock: true
     };
     
-    console.log('Agregando al carrito:', cartItem);
-    // Aquí iría la lógica para agregar al carrito
+    // Usar el contexto del carrito para agregar el producto
+    addStandardItem(standardProduct, quantity);
     
-    // Mostrar mensaje de éxito
-    alert(`Producto ${product.name} agregado al carrito - Color: ${selectedColor ?? '#FFFFFF'}, Talla: ${selectedSize ?? 'M'}, Cantidad: ${quantity}`);
+    console.log('Producto agregado al carrito:', standardProduct);
+    
+    // Mostrar notificación de éxito
+    setShowNotification(true);
+    
+    // Ocultar la notificación después de 3 segundos
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 3000);
   };
 
   // Renderizar selector de colores
@@ -383,7 +399,19 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-50'} pt-20`}>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-50'} pt-20 relative`}>
+      {/* Notificación de éxito */}
+      {showNotification && (
+        <div className="fixed top-24 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-down">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <div>
+            <p className="font-medium">¡Producto agregado al carrito!</p>
+            <p className="text-sm">{product?.name} - {selectedColor && selectedSize ? `${selectedColor}, Talla ${selectedSize}` : ''}</p>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Columna izquierda: Imágenes del producto */}
