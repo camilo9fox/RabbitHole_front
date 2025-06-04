@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import HTMLCanvasV2 from './HTMLCanvasV2';
-import { DesignImage } from '@/types/product';
+import { DesignImage, DesignText } from '@/types/product';
 import { getAdminProductById } from '@/services/adminProductService';
 
 interface ProductCardCanvasProps {
@@ -134,6 +134,9 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
   }, []);
 
   // Efecto para cargar el diseño del producto
+  // Estado para almacenar el texto del diseño
+  const [designText, setDesignText] = useState<DesignText | null>(null);
+  
   useEffect(() => {
     const loadProductDesign = async () => {
       try {
@@ -163,9 +166,16 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
         const requestedAngleKey = angleMap[angle] || 'front';
         console.log(`Ángulo solicitado: ${angle} -> ${requestedAngleKey}`);
         
+        // Verificar si hay diseño de imagen o texto en el ángulo solicitado
         if (product.angles?.[requestedAngleKey]?.image) {
-          console.log(`Usando diseño del ángulo solicitado: ${requestedAngleKey}`);
+          console.log(`Usando diseño de imagen del ángulo solicitado: ${requestedAngleKey}`);
           setDesignImage(product.angles[requestedAngleKey].image);
+          setDesignText(null); // Limpiar texto si existe
+          return;
+        } else if (product.angles?.[requestedAngleKey]?.text) {
+          console.log(`Usando diseño de texto del ángulo solicitado: ${requestedAngleKey}`);
+          setDesignText(product.angles[requestedAngleKey].text);
+          setDesignImage(null); // Limpiar imagen si existe
           return;
         }
         
@@ -173,32 +183,50 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
         console.log('El ángulo solicitado no tiene diseño, buscando alternativas...');
         
         // Buscamos el primer ángulo con diseño según la prioridad
+        let selectedAngle: keyof typeof product.angles | null = null;
+
         
         for (const priorityAngle of priorityAngles) {
+          // Primero verificamos si hay imagen
           if (product.angles?.[priorityAngle]?.image) {
-            console.log(`Usando diseño del ángulo prioritario: ${priorityAngle}`);
-
+            console.log(`Usando diseño de imagen del ángulo prioritario: ${priorityAngle}`);
+            selectedAngle = priorityAngle;
             setDesignImage(product.angles[priorityAngle].image);
-            
-            // Actualizar el ángulo de la polera para que coincida con el diseño
-            const spanishAngle = getSpanishAngleName(priorityAngle);
-            console.log(`Actualizando ángulo de la polera a: ${spanishAngle}`);
-            
-            // Cargar la imagen de la polera para el nuevo ángulo
-            const colorName = getTshirtColorName(color);
-            const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
-            
-            // Verificar si existe la imagen para este ángulo
-            const imageExists = await checkImageExists(newTshirtPath);
-            if (imageExists) {
-              setTshirtBasePath(newTshirtPath);
-              console.log(`Imagen de polera actualizada a: ${newTshirtPath}`);
-            } else {
-              console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle}, usando fallback`);
-            }
-            
-            return;
+            setDesignText(null); // Limpiar texto si existe
+
+            break;
+          } 
+          // Luego verificamos si hay texto
+          else if (product.angles?.[priorityAngle]?.text) {
+            console.log(`Usando diseño de texto del ángulo prioritario: ${priorityAngle}`);
+            selectedAngle = priorityAngle;
+            setDesignText(product.angles[priorityAngle].text);
+            setDesignImage(null); // Limpiar imagen si existe
+
+            break;
           }
+        }
+        
+        // Si encontramos un ángulo con diseño, actualizamos la imagen de la polera
+        if (selectedAngle) {
+          // Actualizar el ángulo de la polera para que coincida con el diseño
+          const spanishAngle = getSpanishAngleName(selectedAngle);
+          console.log(`Actualizando ángulo de la polera a: ${spanishAngle}`);
+          
+          // Cargar la imagen de la polera para el nuevo ángulo
+          const colorName = getTshirtColorName(color);
+          const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
+          
+          // Verificar si existe la imagen para este ángulo
+          const imageExists = await checkImageExists(newTshirtPath);
+          if (imageExists) {
+            setTshirtBasePath(newTshirtPath);
+            console.log(`Imagen de polera actualizada a: ${newTshirtPath}`);
+          } else {
+            console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle}, usando fallback`);
+          }
+          
+          return;
         }
         
         // Si no hay diseño o no tiene imagen, intentar usar la imagen proporcionada
@@ -254,39 +282,63 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
         const requestedAngleKey = angleMap[angle] || 'front';
         console.log(`Ángulo solicitado al recargar: ${angle} -> ${requestedAngleKey}`);
         
+        // Verificar si hay diseño de imagen o texto en el ángulo solicitado
         if (product.angles?.[requestedAngleKey]?.image) {
-          console.log(`Usando diseño del ángulo solicitado al recargar: ${requestedAngleKey}`);
+          console.log(`Usando diseño de imagen del ángulo solicitado al recargar: ${requestedAngleKey}`);
           setDesignImage(product.angles[requestedAngleKey].image);
+          setDesignText(null); // Limpiar texto si existe
+          return;
+        } else if (product.angles?.[requestedAngleKey]?.text) {
+          console.log(`Usando diseño de texto del ángulo solicitado al recargar: ${requestedAngleKey}`);
+          setDesignText(product.angles[requestedAngleKey].text);
+          setDesignImage(null); // Limpiar imagen si existe
           return;
         }
         
         // Si el ángulo solicitado no tiene diseño, buscamos el primer ángulo con diseño según la prioridad
         console.log('El ángulo solicitado no tiene diseño al recargar, buscando alternativas...');
         
+        let selectedAngle: keyof typeof product.angles | null = null;
+        
         for (const priorityAngle of priorityAngles) {
+          // Primero verificamos si hay imagen
           if (product.angles?.[priorityAngle]?.image) {
-            console.log(`Usando diseño del ángulo prioritario al recargar: ${priorityAngle}`);
+            console.log(`Usando diseño de imagen del ángulo prioritario al recargar: ${priorityAngle}`);
+            selectedAngle = priorityAngle;
             setDesignImage(product.angles[priorityAngle].image);
-            
-            // Actualizar el ángulo de la polera para que coincida con el diseño
-            const spanishAngle = getSpanishAngleName(priorityAngle);
-            console.log(`Actualizando ángulo de la polera al recargar a: ${spanishAngle}`);
-            
-            // Cargar la imagen de la polera para el nuevo ángulo
-            const colorName = getTshirtColorName(color);
-            const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
-            
-            // Verificar si existe la imagen para este ángulo
-            const imageExists = await checkImageExists(newTshirtPath);
-            if (imageExists) {
-              setTshirtBasePath(newTshirtPath);
-              console.log(`Imagen de polera actualizada al recargar a: ${newTshirtPath}`);
-            } else {
-              console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle} al recargar, usando fallback`);
-            }
-            
-            return;
+            setDesignText(null); // Limpiar texto si existe
+            break;
+          } 
+          // Luego verificamos si hay texto
+          else if (product.angles?.[priorityAngle]?.text) {
+            console.log(`Usando diseño de texto del ángulo prioritario al recargar: ${priorityAngle}`);
+            selectedAngle = priorityAngle;
+            setDesignText(product.angles[priorityAngle].text);
+            setDesignImage(null); // Limpiar imagen si existe
+            break;
           }
+        }
+        
+        // Si encontramos un ángulo con diseño, actualizamos la imagen de la polera
+        if (selectedAngle) {
+          // Actualizar el ángulo de la polera para que coincida con el diseño
+          const spanishAngle = getSpanishAngleName(selectedAngle);
+          console.log(`Actualizando ángulo de la polera al recargar a: ${spanishAngle}`);
+          
+          // Cargar la imagen de la polera para el nuevo ángulo
+          const colorName = getTshirtColorName(color);
+          const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
+          
+          // Verificar si existe la imagen para este ángulo
+          const imageExists = await checkImageExists(newTshirtPath);
+          if (imageExists) {
+            setTshirtBasePath(newTshirtPath);
+            console.log(`Imagen de polera actualizada al recargar a: ${newTshirtPath}`);
+          } else {
+            console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle} al recargar, usando fallback`);
+          }
+          
+          return;
         }
         
         console.log('No se encontró diseño en ningún ángulo al recargar');
@@ -296,12 +348,12 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [id, angle, getSpanishAngleName, getTshirtColorName, color, checkImageExists]);
+  }, [id, angle, getSpanishAngleName, getTshirtColorName, color, checkImageExists, setDesignText, setDesignImage]);
 
   // Efecto para depurar cuando designImage cambia
   useEffect(() => {
     if (designImage) {
-      console.log('ProductCardCanvas renderizado con:', {
+      console.log('ProductCardCanvas renderizado con imagen:', {
         id,
         title,
         tshirtBasePath,
@@ -310,6 +362,19 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
       });
     }
   }, [id, title, tshirtBasePath, color, designImage]);
+  
+  // Efecto para depurar cuando designText cambia
+  useEffect(() => {
+    if (designText) {
+      console.log('ProductCardCanvas renderizado con texto:', {
+        id,
+        title,
+        tshirtBasePath,
+        color,
+        designText: `"${designText.content}" (${designText.font}, ${designText.size}px, ${designText.color})`
+      });
+    }
+  }, [id, title, tshirtBasePath, color, designText]);
   
   // Efecto para mostrar mensaje cuando hay error de carga
   useEffect(() => {
@@ -337,16 +402,22 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
             </div>
           ) : (
             <div className="w-full h-full">
-              {
-                designImage && (
-                  <HTMLCanvasV2
+              {designImage && (
+                <HTMLCanvasV2
                   tshirtImage={tshirtBasePath}
                   tshirtColor={color}
                   useColorization={true}
                   designImage={designImage}
                 />
-                )
-              }
+              )}
+              {designText && (
+                <HTMLCanvasV2
+                  tshirtImage={tshirtBasePath}
+                  tshirtColor={color}
+                  useColorization={true}
+                  designText={designText}
+                />
+              )}
             </div>
           )}
           <div className="absolute top-5 left-5">
