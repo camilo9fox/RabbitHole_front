@@ -122,6 +122,17 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     };
   }, []);
 
+  // Función para obtener el nombre del ángulo en español a partir del nombre en inglés
+  const getSpanishAngleName = useCallback((englishAngle: string): string => {
+    const reverseAngleMap: Record<string, string> = {
+      'front': 'frente',
+      'back': 'espalda',
+      'left': 'izquierda',
+      'right': 'derecha'
+    };
+    return reverseAngleMap[englishAngle] || 'frente';
+  }, []);
+
   // Efecto para cargar el diseño del producto
   useEffect(() => {
     const loadProductDesign = async () => {
@@ -145,15 +156,49 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           'derecha': 'right'
         };
         
-        const angleKey = angleMap[angle] || 'front';
-        console.log(`Ángulo mapeado: ${angle} -> ${angleKey}`);
+        // Orden de prioridad para los ángulos (inglés)
+        const priorityAngles: (keyof typeof product.angles)[] = ['front', 'back', 'left', 'right'];
         
-        // Si hay una imagen de diseño definida, usarla
-        const designImage = product.angles?.[angleKey]?.image;
-        if (designImage) {
-          console.log('Usando imagen de diseño del producto:', designImage);
-          setDesignImage(designImage);
+        // Primero intentamos usar el ángulo especificado si tiene diseño
+        const requestedAngleKey = angleMap[angle] || 'front';
+        console.log(`Ángulo solicitado: ${angle} -> ${requestedAngleKey}`);
+        
+        if (product.angles?.[requestedAngleKey]?.image) {
+          console.log(`Usando diseño del ángulo solicitado: ${requestedAngleKey}`);
+          setDesignImage(product.angles[requestedAngleKey].image);
           return;
+        }
+        
+        // Si el ángulo solicitado no tiene diseño, buscamos el primer ángulo con diseño según la prioridad
+        console.log('El ángulo solicitado no tiene diseño, buscando alternativas...');
+        
+        // Buscamos el primer ángulo con diseño según la prioridad
+        
+        for (const priorityAngle of priorityAngles) {
+          if (product.angles?.[priorityAngle]?.image) {
+            console.log(`Usando diseño del ángulo prioritario: ${priorityAngle}`);
+
+            setDesignImage(product.angles[priorityAngle].image);
+            
+            // Actualizar el ángulo de la polera para que coincida con el diseño
+            const spanishAngle = getSpanishAngleName(priorityAngle);
+            console.log(`Actualizando ángulo de la polera a: ${spanishAngle}`);
+            
+            // Cargar la imagen de la polera para el nuevo ángulo
+            const colorName = getTshirtColorName(color);
+            const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
+            
+            // Verificar si existe la imagen para este ángulo
+            const imageExists = await checkImageExists(newTshirtPath);
+            if (imageExists) {
+              setTshirtBasePath(newTshirtPath);
+              console.log(`Imagen de polera actualizada a: ${newTshirtPath}`);
+            } else {
+              console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle}, usando fallback`);
+            }
+            
+            return;
+          }
         }
         
         // Si no hay diseño o no tiene imagen, intentar usar la imagen proporcionada
@@ -174,7 +219,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     };
     
     loadProductDesign();
-  }, [id, angle, image, checkImageExists, createDesignObject]);
+  }, [id, angle, image, checkImageExists, createDesignObject, color, getTshirtColorName, getSpanishAngleName]);
 
   // Efecto para recargar el diseño cuando cambia el ID del producto
   // Esto es crucial para asegurar que el diseño se actualice cuando se edita un producto
@@ -186,7 +231,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     setImageError(false);
     
     // Recargar el diseño con un pequeño retraso para asegurar que localStorage esté actualizado
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       try {
         const product = getAdminProductById(id);
         if (!product) {
@@ -202,23 +247,56 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           'derecha': 'right'
         };
         
-        const angleKey = angleMap[angle] || 'front';
+        // Orden de prioridad para los ángulos (inglés)
+        const priorityAngles: (keyof typeof product.angles)[] = ['front', 'back', 'left', 'right'];
         
-        // Usar encadenamiento opcional para acceder a la imagen del diseño
-        const designImage = product.angles?.[angleKey]?.image;
-        if (designImage) {
-          console.log('Diseño recargado:', designImage);
-          setDesignImage(designImage);
-        } else {
-          console.log('No se encontró diseño al recargar');
+        // Primero intentamos usar el ángulo especificado si tiene diseño
+        const requestedAngleKey = angleMap[angle] || 'front';
+        console.log(`Ángulo solicitado al recargar: ${angle} -> ${requestedAngleKey}`);
+        
+        if (product.angles?.[requestedAngleKey]?.image) {
+          console.log(`Usando diseño del ángulo solicitado al recargar: ${requestedAngleKey}`);
+          setDesignImage(product.angles[requestedAngleKey].image);
+          return;
         }
+        
+        // Si el ángulo solicitado no tiene diseño, buscamos el primer ángulo con diseño según la prioridad
+        console.log('El ángulo solicitado no tiene diseño al recargar, buscando alternativas...');
+        
+        for (const priorityAngle of priorityAngles) {
+          if (product.angles?.[priorityAngle]?.image) {
+            console.log(`Usando diseño del ángulo prioritario al recargar: ${priorityAngle}`);
+            setDesignImage(product.angles[priorityAngle].image);
+            
+            // Actualizar el ángulo de la polera para que coincida con el diseño
+            const spanishAngle = getSpanishAngleName(priorityAngle);
+            console.log(`Actualizando ángulo de la polera al recargar a: ${spanishAngle}`);
+            
+            // Cargar la imagen de la polera para el nuevo ángulo
+            const colorName = getTshirtColorName(color);
+            const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
+            
+            // Verificar si existe la imagen para este ángulo
+            const imageExists = await checkImageExists(newTshirtPath);
+            if (imageExists) {
+              setTshirtBasePath(newTshirtPath);
+              console.log(`Imagen de polera actualizada al recargar a: ${newTshirtPath}`);
+            } else {
+              console.log(`No se encontró imagen de polera para el ángulo: ${spanishAngle} al recargar, usando fallback`);
+            }
+            
+            return;
+          }
+        }
+        
+        console.log('No se encontró diseño en ningún ángulo al recargar');
       } catch (error) {
         console.error('Error al recargar el diseño:', error);
       }
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [id, angle]);
+  }, [id, angle, getSpanishAngleName, getTshirtColorName, color, checkImageExists]);
 
   // Efecto para depurar cuando designImage cambia
   useEffect(() => {
