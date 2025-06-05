@@ -47,23 +47,32 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
   }, []);
 
   // Función para obtener el nombre del color de la polera a partir del código hexadecimal
-  const getTshirtColorName = useCallback((hexColor: string): string => {
-    switch (hexColor) {
-      case '#FFFFFF': return 'white';
-      case '#000000': return 'black';
-      case '#0000FF': return 'blue';
-      case '#808080': return 'gray';
-      case '#FF0000': return 'red';
-      default: return 'white';
+  const getTshirtHexColor = useCallback((colorId: string): string => {
+    switch (colorId) {
+      case 'white': return '#FFFFFF';
+      case 'black': return '#1A1A1A';
+      case 'gray': return '#808080';
+      case 'blue': return '#0047AB';
+      case 'navy': return '#000080';
+      case 'lightblue': return '#ADD8E6';
+      case 'red': return '#FF0000';
+      case 'burgundy': return '#800020';
+      case 'pink': return '#FFC0CB';
+      case 'green': return '#008000';
+      case 'olive': return '#808000';
+      case 'mint': return '#98FF98';
+      case 'purple': return '#800080';
+      case 'yellow': return '#FFFF00';
+      case 'orange': return '#FFA500';
+      default: return '#FFFFFF'; // Valor por defecto
     }
   }, []);
-
   // Efecto para cargar la imagen base de la polera
   useEffect(() => {
     const loadTshirtImage = async () => {
       try {
         // Obtener el nombre del color para la ruta de la imagen
-        const colorName = color;
+        const colorName = "white";
         
         // Intentar cargar la imagen con el ángulo especificado
         const basePath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${angle}.png`;
@@ -109,7 +118,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     };
     
     loadTshirtImage();
-  }, [color, angle, checkImageExists, getTshirtColorName]);
+  }, [color, angle, checkImageExists]);
 
 
 
@@ -214,7 +223,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           console.log(`Actualizando ángulo de la polera a: ${spanishAngle}`);
           
           // Cargar la imagen de la polera para el nuevo ángulo
-          const colorName = getTshirtColorName(color);
+          const colorName = color;
           const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
           
           // Verificar si existe la imagen para este ángulo
@@ -247,7 +256,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     };
     
     loadProductDesign();
-  }, [id, angle, image, checkImageExists, createDesignObject, color, getTshirtColorName, getSpanishAngleName]);
+  }, [id, angle, image, checkImageExists, createDesignObject, color, getSpanishAngleName]);
 
   // Efecto para recargar el diseño cuando cambia el ID del producto
   // Esto es crucial para asegurar que el diseño se actualice cuando se edita un producto
@@ -326,7 +335,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           console.log(`Actualizando ángulo de la polera al recargar a: ${spanishAngle}`);
           
           // Cargar la imagen de la polera para el nuevo ángulo
-          const colorName = getTshirtColorName(color);
+          const colorName = color;
           const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
           
           // Verificar si existe la imagen para este ángulo
@@ -348,7 +357,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [id, angle, getSpanishAngleName, getTshirtColorName, color, checkImageExists, setDesignText, setDesignImage]);
+  }, [id, angle, getSpanishAngleName, color, checkImageExists, setDesignText, setDesignImage]);
 
   // Efecto para depurar cuando designImage cambia
   useEffect(() => {
@@ -405,7 +414,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
               {designImage && (
                 <HTMLCanvasV2
                   tshirtImage={tshirtBasePath}
-                  tshirtColor={color}
+                  tshirtColor={getTshirtHexColor(color)}
                   useColorization={true}
                   designImage={designImage}
                 />

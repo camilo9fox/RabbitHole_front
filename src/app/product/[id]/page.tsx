@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { getAdminProductById } from '@/services/adminProductService';
 import { AdminProduct, AngleDesign } from '@/types/product';
@@ -59,13 +59,33 @@ export default function ProductDetail() {
   
   // Contador para forzar la recreación del canvas cuando sea necesario
   const canvasKeyCounter = useRef<number>(0);
+  const getTshirtHexColor = useCallback((colorId: string): string => {
+    switch (colorId) {
+      case 'white': return '#FFFFFF';
+      case 'black': return '#1A1A1A';
+      case 'gray': return '#808080';
+      case 'blue': return '#0047AB';
+      case 'navy': return '#000080';
+      case 'lightblue': return '#ADD8E6';
+      case 'red': return '#FF0000';
+      case 'burgundy': return '#800020';
+      case 'pink': return '#FFC0CB';
+      case 'green': return '#008000';
+      case 'olive': return '#808000';
+      case 'mint': return '#98FF98';
+      case 'purple': return '#800080';
+      case 'yellow': return '#FFFF00';
+      case 'orange': return '#FFA500';
+      default: return '#FFFFFF'; // Valor por defecto
+    }
+  }, []);
 
   // Inicializar colores y tallas predeterminados cuando se carga el producto
   useEffect(() => {
     if (product) {
       // Inicializar color predeterminado si no está ya seleccionado
       if (!selectedColor && product.colors?.length) {
-        const defaultColor = product.colors[0];
+        const defaultColor = getTshirtHexColor(product?.selectedColor ?? 'white');
         setSelectedColor(defaultColor);
         console.log('Color predeterminado seleccionado:', defaultColor);
       } else if (!product.colors?.length) {
