@@ -624,6 +624,7 @@ const CustomizeHTML = () => {
       color: selectedColorOption.value,
       size: selectedSizeOption.id,
       thumbnail: thumbnailUrl,
+      selectedColor: selectedColorOption.id,
       angles: {
         front: getAngleDesign('front'),
         back: getAngleDesign('back'),
@@ -877,7 +878,7 @@ const CustomizeHTML = () => {
       if (loadedProduct) {
         // Cargar datos del producto en el formulario
         // Usamos un color predeterminado ya que no guardamos colores específicos
-        setValue('color', 'white');
+        setValue('color', loadedProduct?.selectedColor ?? 'white');
         // Usamos una talla predeterminada ya que no guardamos tallas específicas
         setValue('size', 'M');
         setValue('basePrice', loadedProduct.price);

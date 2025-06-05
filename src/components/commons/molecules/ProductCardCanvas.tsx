@@ -63,7 +63,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
     const loadTshirtImage = async () => {
       try {
         // Obtener el nombre del color para la ruta de la imagen
-        const colorName = getTshirtColorName(color);
+        const colorName = color;
         
         // Intentar cargar la imagen con el ángulo especificado
         const basePath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${angle}.png`;

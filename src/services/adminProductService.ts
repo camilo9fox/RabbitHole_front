@@ -62,6 +62,7 @@ export const saveAdminProduct = (product: Partial<AdminProduct>): AdminProduct =
       price: product.price ?? 0,
       category: product.category ?? 'Sin categoría',
       thumbnail: product.thumbnail ?? '',
+      selectedColor: product?.selectedColor ?? 'white',
       angles: product.angles ?? {
         front: {},
         back: {},

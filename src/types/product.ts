@@ -47,7 +47,7 @@ export interface AdminProduct {
     left: AngleDesign;
     right: AngleDesign;
   };
-  
+  selectedColor?: string;
   // Categoría del producto
   category: string;     // Categoría del producto (ej: "Urbano", "Minimalista", etc.)
   
