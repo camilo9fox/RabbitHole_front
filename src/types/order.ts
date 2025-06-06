@@ -54,4 +54,5 @@ export interface Order {
   total: number; // Total final
   createdAt: Date;
   updatedAt: Date;
+  trackingToken: string; // Token único para seguimiento de pedidos no autenticados
 }

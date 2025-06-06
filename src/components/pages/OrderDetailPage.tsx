@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { ArrowLeft, Printer, Share2 } from 'lucide-react';
@@ -46,7 +46,17 @@ const ErrorState: React.FC<{error: string; isDarkMode: boolean; onGoBack: () => 
 const OrderDetailPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderId = searchParams.get('id');
+  const params = useParams();
+  
+  // Intentar obtener el ID del pedido de los parámetros de ruta primero, luego de los query params
+  const routeId = params?.id as string;
+  const queryId = searchParams.get('id');
+  const orderId = routeId || queryId;
+  
+  console.log('Route ID:', routeId);
+  console.log('Query ID:', queryId);
+  console.log('Using Order ID:', orderId);
+  
   const { data: session, status } = useSession();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';

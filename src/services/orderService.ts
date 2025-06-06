@@ -2,11 +2,25 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { Order, OrderStatus, StatusHistoryEntry, ShippingInfo, PaymentInfo } from '@/types/order';
-import { Cart } from '@/types/cart';
+import { Cart, CustomDesignStatus, isCustomItem } from '@/types/cart';
 import { Session } from 'next-auth';
 
 // Clave para almacenar los pedidos en localStorage
 const ORDERS_STORAGE_KEY = 'rabbit-hole-orders';
+
+// Verificar si localStorage está disponible
+const isLocalStorageAvailable = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    localStorage.setItem('test', 'test');
+    localStorage.removeItem('test');
+    return true;
+  } catch {
+    // Error de acceso a localStorage
+    return false;
+  }
+};
 
 // Obtener todos los pedidos
 export const getAllOrders = (): Order[] => {
@@ -47,7 +61,7 @@ export const getAllOrders = (): Order[] => {
     console.log('Órdenes recuperadas y procesadas de localStorage:', orders);
     return orders;
   } catch (error) {
-    console.error('Error al obtener las órdenes:', error);
+    console.error('Error al recuperar órdenes de localStorage:', error);
     return [];
   }
 };
@@ -56,11 +70,8 @@ export const getAllOrders = (): Order[] => {
 export const getUserOrders = (userId?: string, userEmail?: string): Order[] => {
   const allOrders = getAllOrders();
   
-  if (!userId && !userEmail) return [];
-  
   return allOrders.filter(order => 
-    (userId && order.userId === userId) || 
-    (userEmail && order.userEmail === userEmail)
+    (userId && order.userId === userId) || (userEmail && order.userEmail === userEmail)
   );
 };
 
@@ -73,33 +84,14 @@ export const getOrderById = (orderId: string): Order | null => {
 // Obtener un pedido por su ID y token (para usuarios no autenticados)
 export const getOrderByIdAndToken = (orderId: string, token: string): Order | null => {
   // En una implementación real, verificaríamos el token contra alguna base de datos
-  // Por ahora, simplemente devolvemos el pedido si existe
+  // Por ahora, simplemente verificamos que coincida con el id por simplicidad
   const order = getOrderById(orderId);
   
-  // Verificación básica: si el pedido existe y tiene un token generado en su transactionId
-  // que coincide con el token proporcionado
-  if (order?.paymentInfo?.transactionId?.includes(token)) {
+  if (order && order.trackingToken === token) {
     return order;
   }
   
-  // Si el token no coincide o no hay pedido, devolver null
-  console.log(`Verificación de token fallida para pedido ${orderId}`);
   return null;
-};
-
-// Verificar si localStorage está disponible
-const isLocalStorageAvailable = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  
-  try {
-    const testKey = '__test_key__';
-    window.localStorage.setItem(testKey, testKey);
-    window.localStorage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    console.error('localStorage no está disponible:', e);
-    return false;
-  }
 };
 
 // Guardar un pedido
@@ -109,27 +101,23 @@ export const saveOrder = (
   paymentInfo: PaymentInfo, 
   session?: Session | null
 ): Order => {
-  // Verificar si estamos en el cliente y si localStorage está disponible
   if (!isLocalStorageAvailable()) {
-    console.error('No se puede guardar la orden: localStorage no está disponible');
-    throw new Error('No se puede guardar la orden: localStorage no está disponible');
+    throw new Error('No se puede guardar el pedido: localStorage no está disponible');
   }
   
   try {
     const allOrders = getAllOrders();
     
-    // Calcular subtotal (mismo que cart.totalPrice por ahora)
-    const subtotal = cart.totalPrice;
-    // Por ahora, envío gratis y sin descuentos
-    const shipping = 0;
-    const discount = 0;
-    const total = subtotal + shipping - discount;
-    
+    // Crear un nuevo pedido
     const newOrder: Order = {
       id: uuidv4(),
-      userId: session?.user?.id,
+      userId: session?.user?.id ?? "",
       userEmail: session?.user?.email ?? shippingInfo.email,
       items: [...cart.items],
+      subtotal: cart.totalPrice, // Usamos totalPrice como subtotal ya que no tenemos subtotal en Cart
+      shipping: 0, // Valor predeterminado para envío
+      discount: 0, // Valor predeterminado para descuento
+      total: cart.totalPrice, // El total es igual al precio total del carrito
       shippingInfo,
       paymentInfo,
       status: OrderStatus.PENDING,
@@ -137,55 +125,33 @@ export const saveOrder = (
         {
           status: OrderStatus.PENDING,
           date: new Date(),
-          note: 'Pedido creado'
+          note: 'Pedido recibido'
         }
       ],
-      subtotal,
-      shipping,
-      discount,
-      total,
+      trackingToken: uuidv4(),
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
     // Verificar si la orden tiene datos válidos
     if (!newOrder.items || newOrder.items.length === 0) {
-      console.error('No se puede guardar una orden sin items');
-      throw new Error('No se puede guardar una orden sin items');
+      throw new Error('No se puede crear un pedido sin productos');
     }
     
-    // Agregar la nueva orden a la lista
+    if (!newOrder.shippingInfo || !newOrder.paymentInfo) {
+      throw new Error('Información de envío o pago incompleta');
+    }
+    
+    // Agregar el nuevo pedido a la lista
     allOrders.push(newOrder);
     
-    // Convertir a JSON y guardar
-    const ordersJson = JSON.stringify(allOrders);
-    try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, ordersJson);
-      
-      // Verificar que se guardó correctamente
-      const savedJson = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (!savedJson) {
-        throw new Error('No se pudo verificar que la orden se guardó correctamente');
-      }
-      
-      console.log('Orden guardada exitosamente con ID:', newOrder.id);
-      return newOrder;
-    } catch (storageError) {
-      console.error('Error al escribir en localStorage:', storageError);
-      // Intentar con un enfoque alternativo - puede ser un problema de cuota
-      try {
-        // Limpiar localStorage y volver a intentar solo con esta orden
-        localStorage.clear();
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify([newOrder]));
-        console.log('Orden guardada después de limpiar localStorage');
-        return newOrder;
-      } catch (finalError) {
-        console.error('Error fatal al guardar la orden:', finalError);
-        throw new Error('No se pudo guardar la orden después de múltiples intentos');
-      }
-    }
+    // Guardar en localStorage
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+    
+    console.log('Pedido guardado:', newOrder);
+    return newOrder;
   } catch (error) {
-    console.error('Error al guardar la orden:', error);
+    console.error('Error al guardar el pedido:', error);
     throw error;
   }
 };
@@ -219,7 +185,7 @@ export const updateOrderStatus = (
     historyEntry
   ];
   
-  // Actualizar en el array
+  // Actualizar en el array de órdenes
   allOrders[orderIndex] = updatedOrder;
   
   // Guardar en localStorage
@@ -233,15 +199,124 @@ export const deleteOrder = (orderId: string): boolean => {
   const allOrders = getAllOrders();
   const filteredOrders = allOrders.filter(order => order.id !== orderId);
   
-  if (filteredOrders.length === allOrders.length) {
-    return false; // No se encontró el pedido
-  }
-  
   localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(filteredOrders));
+  
   return true;
 };
 
 // Limpiar todos los pedidos (solo para pruebas)
 export const clearAllOrders = (): void => {
   localStorage.removeItem(ORDERS_STORAGE_KEY);
+};
+
+// Aprobar un diseño personalizado en una orden
+export const approveCustomDesign = (
+  orderId: string,
+  designId: string
+): Order => {
+  const allOrders = getAllOrders();
+  const orderIndex = allOrders.findIndex(order => order.id === orderId);
+  
+  if (orderIndex === -1) {
+    throw new Error(`No se encontró la orden con ID ${orderId}`);
+  }
+  
+  // Crear una copia de la orden para modificarla
+  const updatedOrder = { ...allOrders[orderIndex] };
+  
+  // Buscar y actualizar el item con el diseño personalizado
+  const updatedItems = updatedOrder.items.map(item => {
+    if (isCustomItem(item) && item.design.id === designId) {
+      return {
+        ...item,
+        design: {
+          ...item.design,
+          status: CustomDesignStatus.APPROVED,
+          updatedAt: new Date()
+        }
+      };
+    }
+    return item;
+  });
+  
+  // Actualizar los items en la orden
+  updatedOrder.items = updatedItems;
+  updatedOrder.updatedAt = new Date();
+  
+  // Añadir entrada al historial
+  const historyEntry: StatusHistoryEntry = {
+    status: updatedOrder.status,
+    date: new Date(),
+    note: 'Diseño personalizado aprobado'
+  };
+  
+  updatedOrder.statusHistory = [
+    ...updatedOrder.statusHistory,
+    historyEntry
+  ];
+  
+  // Actualizar en el array de órdenes
+  allOrders[orderIndex] = updatedOrder;
+  
+  // Guardar en localStorage
+  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+  
+  return updatedOrder;
+};
+
+// Rechazar un diseño personalizado en una orden
+export const rejectCustomDesign = (
+  orderId: string,
+  designId: string,
+  rejectionReason: string
+): Order => {
+  const allOrders = getAllOrders();
+  const orderIndex = allOrders.findIndex(order => order.id === orderId);
+  
+  if (orderIndex === -1) {
+    throw new Error(`No se encontró la orden con ID ${orderId}`);
+  }
+  
+  // Crear una copia de la orden para modificarla
+  const updatedOrder = { ...allOrders[orderIndex] };
+  
+  // Buscar y actualizar el item con el diseño personalizado
+  const updatedItems = updatedOrder.items.map(item => {
+    if (isCustomItem(item) && item.design.id === designId) {
+      return {
+        ...item,
+        design: {
+          ...item.design,
+          status: CustomDesignStatus.REJECTED,
+          rejectionReason: rejectionReason ?? 'Diseño rechazado por el administrador',
+          updatedAt: new Date()
+        }
+      };
+    }
+    return item;
+  });
+  
+  // Actualizar los items en la orden
+  updatedOrder.items = updatedItems;
+  updatedOrder.updatedAt = new Date();
+  
+  // Añadir entrada al historial
+  const historyEntry: StatusHistoryEntry = {
+    status: updatedOrder.status,
+    date: new Date(),
+    note: `Diseño personalizado rechazado: ${rejectionReason ?? 'Sin razón especificada'}`
+  };
+  
+  updatedOrder.statusHistory = [
+    ...updatedOrder.statusHistory,
+    historyEntry
+  ];
+  
+  // Actualizar en el array de órdenes
+  allOrders[orderIndex] = updatedOrder;
+  
+  // Guardar en localStorage
+  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+  
+  return updatedOrder;
 };
