@@ -4,6 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useCart } from '@/context/CartContext';
 import { CartItemType } from '@/types/cart';
+import { ShippingInfo, PaymentInfo } from '@/types/order';
+import { saveOrder } from '@/services/orderService';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CreditCard, Check } from 'lucide-react';
@@ -26,10 +30,13 @@ const Input = ({ label, type = 'text', ...props }: { label: string; type?: strin
 };
 
 const CheckoutPage: React.FC = () => {
-  const { cart, removeItem } = useCart();
+  const { cart, removeItem, clearCart } = useCart();
   const { resolvedTheme } = useTheme();
+  const { data: session } = useSession();
+  const router = useRouter();
   const isDarkMode = resolvedTheme === 'dark';
   const [step, setStep] = useState(1);
+  const [orderId, setOrderId] = useState<string | null>(null);
   
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
@@ -55,17 +62,29 @@ const CheckoutPage: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: '',
+    email: session?.user?.email || '',
     address: '',
     city: '',
+    state: '',
     postalCode: '',
+    country: 'Chile',
     phone: '',
-    paymentMethod: 'credit',
+    paymentMethod: 'credit_card', // Cambiado de 'credit' a 'credit_card' para coincidir con el tipo PaymentInfo
     cardNumber: '',
     cardName: '',
     cardExpiry: '',
     cardCvc: '',
   });
+  
+  // Prellenar el email si el usuario está autenticado
+  useEffect(() => {
+    if (session?.user?.email) {
+      setFormData(prev => ({
+        ...prev,
+        email: session.user.email || ''
+      }));
+    }
+  }, [session]);
 
   // Formatear precio en CLP
   const formatPrice = (price: number) => {
@@ -90,14 +109,49 @@ const CheckoutPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 3) {
-      handleNextStep(e);
-    } else {
-      // Procesar el pago y finalizar la compra
-      console.log('Procesando compra:', { cart, formData });
-      // Aquí iría la lógica para procesar el pago y crear la orden
-      alert('¡Compra realizada con éxito!');
+    setStep(step + 1);
+    // Procesar el pago y finalizar la compra
+    console.log('Procesando compra:', { cart, formData });
+    
+    // Crear objetos de información de envío y pago
+    const shippingInfo: ShippingInfo = {
+      fullName: `${formData.firstName} ${formData.lastName}`,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      postalCode: formData.postalCode,
+      country: formData.country,
+      phone: formData.phone,
+      email: formData.email
+    };
+    
+    const paymentInfo: PaymentInfo = {
+      method: formData.paymentMethod as 'credit_card' | 'debit_card' | 'paypal' | 'transfer',
+      cardNumber: formData.cardNumber ? formData.cardNumber.slice(-4) : undefined,
+      cardHolder: formData.cardName || undefined,
+      transactionId: `TR-${Date.now()}`
+    };
+    
+    console.log('Guardando orden con:', { 
+      cart, 
+      shippingInfo, 
+      paymentInfo, 
+      session 
+    });
+    
+    try {
+      // Guardar el pedido usando nuestro servicio
+      const order = saveOrder(cart, shippingInfo, paymentInfo, session);
+      console.log('Orden guardada exitosamente:', order);
+      setOrderId(order.id);
+      
+      // Limpiar el carrito después de completar la compra
+      clearCart();
+    } catch (error) {
+      console.error('Error al guardar la orden:', error);
+      alert('Hubo un problema al procesar tu pedido. Por favor, intenta nuevamente.');
     }
+    
   };
 
   // Verificar si hay diseños personalizados pendientes de aprobación
@@ -268,7 +322,7 @@ const CheckoutPage: React.FC = () => {
 
   // Renderizar el paso de información de envío
   const renderShippingInfo = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleNextStep} className="space-y-6">
       <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Información de Envío</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,22 +411,38 @@ const CheckoutPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
           <input
-            id="credit"
+            id="credit_card"
             name="paymentMethod"
             type="radio"
-            value="credit"
-            checked={formData.paymentMethod === 'credit'}
+            value="credit_card"
+            checked={formData.paymentMethod === 'credit_card'}
             onChange={handleChange}
             className={`h-4 w-4 focus:ring-2 ${isDarkMode ? 'text-blue-500 focus:ring-blue-400 border-gray-600' : 'text-blue-600 focus:ring-blue-500 border-gray-300'}`}
           />
-          <label htmlFor="credit" className="flex items-center">
+          <label htmlFor="credit_card" className="flex items-center">
             <CreditCard className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`} />
-            <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Tarjeta de Crédito/Débito</span>
+            <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Tarjeta de Crédito</span>
+          </label>
+        </div>
+        
+        <div className="flex items-center space-x-3 mt-2">
+          <input
+            id="debit_card"
+            name="paymentMethod"
+            type="radio"
+            value="debit_card"
+            checked={formData.paymentMethod === 'debit_card'}
+            onChange={handleChange}
+            className={`h-4 w-4 focus:ring-2 ${isDarkMode ? 'text-blue-500 focus:ring-blue-400 border-gray-600' : 'text-blue-600 focus:ring-blue-500 border-gray-300'}`}
+          />
+          <label htmlFor="debit_card" className="flex items-center">
+            <CreditCard className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`} />
+            <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Tarjeta de Débito</span>
           </label>
         </div>
       </div>
       
-      {formData.paymentMethod === 'credit' && (
+      {(formData.paymentMethod === 'credit_card' || formData.paymentMethod === 'debit_card') && (
         <div className={`mt-4 p-4 border rounded-md ${isDarkMode ? 'border-gray-700 bg-gray-700/50' : 'border-gray-200 bg-gray-50'}`}>
           <Input 
             label="Número de Tarjeta" 
@@ -442,6 +512,12 @@ const CheckoutPage: React.FC = () => {
         Hemos recibido tu pedido y lo estamos procesando. Recibirás un correo electrónico con los detalles de tu compra.
       </p>
       
+      {orderId && (
+        <p className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+          Número de pedido: {orderId}
+        </p>
+      )}
+      
       {hasPendingDesigns && (
         <div className={`mt-4 p-4 border rounded-md text-left ${isDarkMode ? 'bg-yellow-900 border-yellow-800' : 'bg-yellow-50 border-yellow-200'}`}>
           <p className={`text-sm ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
@@ -450,13 +526,22 @@ const CheckoutPage: React.FC = () => {
         </div>
       )}
       
-      <div className="pt-6">
+      <div className="pt-6 flex flex-col sm:flex-row justify-center gap-4">
         <Link 
           href="/" 
           className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isDarkMode ? 'bg-blue-700 hover:bg-blue-600 focus:ring-blue-400' : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'} focus:outline-none focus:ring-2 focus:ring-offset-2`}
         >
           Volver a la Tienda
         </Link>
+        
+        {orderId && (
+          <button
+            onClick={() => router.push(`/my-orders/${orderId}`)}
+            className={`inline-flex items-center px-6 py-3 border text-base font-medium rounded-md shadow-sm ${isDarkMode ? 'border-blue-700 text-blue-400 hover:bg-blue-900' : 'border-blue-600 text-blue-600 hover:bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+          >
+            Ver Detalles del Pedido
+          </button>
+        )}
       </div>
     </div>
   );
