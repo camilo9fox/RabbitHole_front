@@ -27,9 +27,17 @@ const AdminOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   
-  // Verificar si es admin basado en email
-  const isAdmin = localStorage.getItem("user_role") === "admin";
+  // Estado para controlar si el usuario es admin
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const isDarkMode = resolvedTheme === 'dark';
+  
+  // Verificar si es admin, pero solo en el cliente
+  useEffect(() => {
+    // Solo ejecutar en el cliente
+    if (typeof window !== 'undefined') {
+      setIsAdmin(localStorage.getItem("user_role") === "admin");
+    }
+  }, []);
 
   // Cargar órdenes al inicio
   useEffect(() => {

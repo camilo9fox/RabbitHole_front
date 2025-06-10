@@ -1,10 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { CartItem, isStandardItem, isCustomItem } from '@/types/cart';
 import { formatPrice } from '@/utils/formatters';
 import Image from 'next/image';
+import { Search } from 'lucide-react';
+import CanvasModal from './CanvasModal';
 
 interface OrderItemDetailProps {
   item: CartItem;
@@ -13,6 +15,16 @@ interface OrderItemDetailProps {
 const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+  
   
   // Determinar la imagen a mostrar según el tipo de ítem
   const getItemImage = (): string => {
@@ -60,7 +72,12 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   
   return (
     <div className={`p-4 flex items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-      <div className="flex-shrink-0 h-20 w-20 bg-gray-200 rounded-md overflow-hidden relative">
+      <button 
+        className="flex-shrink-0 h-20 w-20 bg-gray-200 rounded-md overflow-hidden relative cursor-pointer group p-0 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+        onClick={handleOpenModal}
+        aria-label={`Ver imagen de ${getItemName()}`}
+        type="button"
+      >
         <Image
           src={getItemImage()}
           alt={getItemName()}
@@ -68,7 +85,10 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
           className="object-cover"
           unoptimized={true}
         />
-      </div>
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-300 bg-black bg-opacity-20 rounded-md">
+          <Search className="h-6 w-6 text-white" />
+        </div>
+      </button>
       
       <div className="ml-4 flex-1">
         <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -91,6 +111,12 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
           </p>
         </div>
       </div>
+      {/* Modal de visualización de producto */}
+      <CanvasModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        item={item} 
+      />
     </div>
   );
 };
