@@ -1,4 +1,4 @@
-// Interfaces para productos diseñados por el administrador
+// Interfaces para productos y diseños
 
 // Representa un elemento de diseño (imagen) en un ángulo específico
 export interface DesignImage {
@@ -31,14 +31,12 @@ export interface AngleDesign {
   text?: DesignText;    // Texto de diseño (opcional)
 }
 
-// Representa un producto completo diseñado por el administrador
-export interface AdminProduct {
+// Representa un producto completo creado por el administrador
+export interface Product {
   id: string;           // ID único del producto
   name: string;         // Nombre del producto
   description: string;  // Descripción del producto
   price: number;        // Precio base del producto
-  createdAt: number;    // Timestamp de creación
-  updatedAt: number;    // Timestamp de última actualización
   
   // Diseños para cada ángulo de la polera
   angles: {
@@ -47,25 +45,25 @@ export interface AdminProduct {
     left: AngleDesign;
     right: AngleDesign;
   };
-  selectedColor?: string;
-  // Categoría del producto
+  
   category: string;     // Categoría del producto (ej: "Urbano", "Minimalista", etc.)
-  
-  // Imagen de miniatura para mostrar en la tienda
   thumbnail?: string;   // URL o data URL de la miniatura
+  inStock: boolean;     // Disponibilidad del producto
+  selectedColor?: string; // Color seleccionado actualmente (para compatibilidad)
   
-  // Indica si el producto está publicado en la tienda
-  inStore?: boolean;    // true si está en la tienda, false si no está publicado
+  // Colores y tallas disponibles
+  colors: string[];     // Lista de colores disponibles en formato hexadecimal
+  sizes: string[];      // Lista de tallas disponibles (ej: "S", "M", "L", "XL")
   
-  // Colores disponibles para el producto
-  colors?: string[];    // Lista de colores disponibles en formato hexadecimal
-  
-  // Tallas disponibles para el producto
-  sizes?: string[];     // Lista de tallas disponibles (ej: "S", "M", "L", "XL")
+  createdAt: Date;      // Fecha de creación
+  updatedAt: Date;      // Fecha de última actualización
 }
 
 // Tipo para el estado de productos en localStorage
 export interface ProductsState {
-  products: AdminProduct[];
+  products: Product[];
   lastUpdated: number;
 }
+
+// Tipo auxiliar para compatibilidad con código legacy
+export type AdminProduct = Product;

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Order, OrderStatus } from '@/types/order';
 import { isCustomItem } from '@/types/cart';
+import { getDesignSafely } from '@/utils/cartHelpers';
 import { 
   getAllOrders, 
   updateOrderStatus, 
@@ -96,11 +97,13 @@ const AdminOrdersPage: React.FC = () => {
     
     // Aplicar la acción a todos los items personalizados de la orden
     for (const item of order.items) {
-      if (isCustomItem(item) && item.design.id) {
+      // Obtener el diseño de forma segura
+      const design = getDesignSafely(item);
+      if (isCustomItem(item) && design?.id) {
         if (action === 'approve') {
-          updatedOrder = approveCustomDesign(orderId, item.design.id);
+          updatedOrder = approveCustomDesign(orderId, design.id);
         } else {
-          updatedOrder = rejectCustomDesign(orderId, item.design.id, 'Rechazado por el administrador');
+          updatedOrder = rejectCustomDesign(orderId, design.id, 'Rechazado por el administrador');
         }
       }
     }

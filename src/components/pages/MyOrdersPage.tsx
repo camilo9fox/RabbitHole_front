@@ -12,6 +12,7 @@ import OrderSummary from '@/components/commons/molecules/OrderSummary';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Search, Package, ShoppingBag } from 'lucide-react';
+import { getItemImageSafely, getItemNameSafely, getItemPriceSafely } from '@/utils/cartHelpers';
 
 
 
@@ -215,30 +216,17 @@ const MyOrdersPage: React.FC = () => {
                       {selectedOrder.items.slice(0, 3).map((item, idx) => (
                         <li key={`item-${selectedOrder.id}-${idx}`} className="p-4 flex items-center">
                           <div className="flex-shrink-0 h-16 w-16 bg-gray-200 rounded-md overflow-hidden">
-                            {item.type === 'standard' && 'product' in item && (
-                              <Image
-                                src={item.product.images[0]}
-                                alt={item.product.name}
-                                width={64}
-                                height={64}
-                                className="h-full w-full object-cover"
-                              />
-                            )}
-                            {item.type === 'custom' && 'design' in item && item.design.front.previewImage && (
-                              <Image
-                                src={item.design.front.previewImage}
-                                alt="Diseño personalizado"
-                                width={64}
-                                height={64}
-                                className="h-full w-full object-cover"
-                              />
-                            )}
+                            <Image
+                              src={getItemImageSafely(item)}
+                              alt={getItemNameSafely(item)}
+                              width={64}
+                              height={64}
+                              className="h-full w-full object-cover"
+                            />
                           </div>
                           <div className="ml-4 flex-1">
                             <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {item.type === 'standard' && 'product' in item
-                                ? item.product.name
-                                : 'Diseño personalizado'}
+                              {getItemNameSafely(item)}
                             </p>
                             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               Cantidad: {item.quantity}
@@ -246,7 +234,7 @@ const MyOrdersPage: React.FC = () => {
                           </div>
                           <div className="text-right">
                             <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                              ${item.price.toLocaleString()}
+                              ${getItemPriceSafely(item).toLocaleString()}
                             </p>
                           </div>
                         </li>

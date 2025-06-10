@@ -11,8 +11,20 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CreditCard, Check } from 'lucide-react';
+import { 
+  getImageUrlFromItem,
+  getNameFromItem,
+  getPriceFromItem,
+  getDetailsFromItem,
+  getProductSafely,
+  getDesignSafely,
+  getDesignViewsSafely,
+  isCustomItem,
+  isProductItem,
+} from '@/utils/cartHelpers';
 
 // Componentes de formulario
+// Componente input con manejo de temas oscuro/claro
 const Input = ({ label, type = 'text', ...props }: { label: string; type?: string; [key: string]: unknown }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
@@ -41,9 +53,10 @@ const CheckoutPage: React.FC = () => {
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
   
-  // Log the current theme for debugging
+  // Log the current theme for debugging and verificar que CartItemType está disponible
   useEffect(() => {
     console.log('Current theme in CheckoutPage:', resolvedTheme);
+    console.log('Cart item types available:', { standard: CartItemType.STANDARD, custom: CartItemType.CUSTOM });
   }, [resolvedTheme]);
   
   // Función auxiliar para obtener las clases del círculo de paso
@@ -62,7 +75,7 @@ const CheckoutPage: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: session?.user?.email || '',
+    email: session?.user?.email ?? '',
     address: '',
     city: '',
     state: '',
@@ -81,7 +94,7 @@ const CheckoutPage: React.FC = () => {
     if (session?.user?.email) {
       setFormData(prev => ({
         ...prev,
-        email: session.user.email || ''
+        email: session.user.email ?? ''
       }));
     }
   }, [session]);
@@ -154,20 +167,20 @@ const CheckoutPage: React.FC = () => {
     
   };
 
-  // Verificar si hay diseños personalizados pendientes de aprobación
-  const hasPendingDesigns = cart.items.some(
-    (item) => item.type === CartItemType.CUSTOM && 
-    'design' in item && 
-    item.design.status === 'pending'
-  );
+  // Verificar si hay diseños personalizados pendientes de forma segura
+  const hasPendingDesigns = cart?.items?.some(
+    (item) => {
+      const design = getDesignSafely(item);
+      return isCustomItem(item) && design && design.status === 'pending';
+    }
+  ) ?? false;
 
-  // Renderizar los items del carrito
   const renderCartItems = () => {
-    if (cart.items.length === 0) {
+    if (!cart || cart.items.length === 0) {
       return (
         <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">El carrito está vacío</p>
-          <Link href="/" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mt-2 inline-block">
+          <p className={`text-gray-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>El carrito está vacío</p>
+          <Link href="/" className={`text-blue-600 hover:text-blue-800 ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} mt-2 inline-block`}>
             Continuar comprando
           </Link>
         </div>
@@ -177,44 +190,20 @@ const CheckoutPage: React.FC = () => {
     return (
       <ul className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
         {cart.items.map((item, index) => {
-          let image = '/assets/products/placeholder.png';
-          let name = '';
-          let price = 0;
-          let details = '';
+          // Usar las funciones utilitarias para obtener datos seguros
+          const image = getImageUrlFromItem(item);
+          const name = getNameFromItem(item);
+          const price = getPriceFromItem(item);
+          const details = getDetailsFromItem(item);
           
-          if (item.type === CartItemType.STANDARD && 'product' in item) {
-            image = item.product.images[0] ?? '/assets/products/placeholder.png';
-            name = item.product.name;
-            price = item.product.price;
-            details = `${item.product.color} / Talla ${item.product.size.toUpperCase()}`;
-          } else if (item.type === CartItemType.CUSTOM && 'design' in item) {
-            // Obtener la vista activa o usar 'front' por defecto
-            const itemKey = `custom-${item.design.id}`;
-            const activeView = activeViews[itemKey] || 'front';
-            
-            // Obtener la imagen de la vista activa
-            const viewData = item.design[activeView as 'front' | 'back' | 'left' | 'right'];
-            image = viewData?.previewImage ?? viewData?.image ?? '/assets/products/placeholder.png';
-            
-            name = 'Polera Personalizada';
-            // Usar el precio real del diseño personalizado
-            price = item.price;
-            details = `${item.design.color} / Talla ${item.design.size.toUpperCase()}`;
-            
-            if (item.design.status === 'pending') {
-              details += ' / Pendiente de aprobación';
-            } else if (item.design.status === 'approved') {
-              details += ' / Aprobado';
-            } else if (item.design.status === 'rejected') {
-              details += ' / Rechazado';
-            }
-          }
-
-          // Crear una clave única para cada item basada en su ID y tipo
-          const itemKey = item.type === CartItemType.STANDARD 
-            ? `standard-${item.product.id}` 
-            : `custom-${item.design.id}`;
-            
+          // Determinar si es un item personalizado
+          const isCustom = isCustomItem(item);
+          const product = getProductSafely(item);
+          const design = getDesignSafely(item);
+          const itemKey = isProductItem(item)
+            ? `standard-${product?.id ?? index}`
+            : `custom-${design?.id ?? index}`;
+          
           return (
             <li key={itemKey} className="py-4 flex overflow-hidden cart-item-container w-full">
               <div className="flex">
@@ -229,32 +218,27 @@ const CheckoutPage: React.FC = () => {
                 </div>
                 
                 {/* Botones de navegación entre vistas para diseños personalizados */}
-                {item.type === CartItemType.CUSTOM && 'design' in item && (
+                {isCustom && design && (
                   <div className="ml-2 flex flex-col justify-center">
-                    {Object.entries(item.design)
-                      .filter(([key, view]) => 
-                        ['front', 'back', 'left', 'right'].includes(key) && 
-                        (view as { previewImage?: string })?.previewImage
-                      )
-                      .map(([viewKey]) => {
-                        const isActive = activeViews[itemKey] === viewKey || (!activeViews[itemKey] && viewKey === 'front');
-                        let label = '';
-                        if (viewKey === 'front') label = 'F';
-                        else if (viewKey === 'back') label = 'E';
-                        else if (viewKey === 'left') label = 'I';
-                        else if (viewKey === 'right') label = 'D';
-                        
-                        return (
-                          <button
-                            key={viewKey}
-                            onClick={() => setActiveViews(prev => ({ ...prev, [itemKey]: viewKey }))}
-                            className={`my-0.5 px-1.5 py-0.5 text-xs rounded-md ${isActive ? 'bg-blue-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
-                            title={viewKey.charAt(0).toUpperCase() + viewKey.slice(1)}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                    {getDesignViewsSafely(design).map((viewKey: string) => {
+                      const isActive = activeViews[itemKey] === viewKey || (!activeViews[itemKey] && viewKey === 'front'); // Aquí OR es correcto porque evaluamos condición booleana
+                      let label = '';
+                      if (viewKey === 'front') label = 'F';
+                      else if (viewKey === 'back') label = 'E';
+                      else if (viewKey === 'left') label = 'I';
+                      else if (viewKey === 'right') label = 'D';
+                      
+                      return (
+                        <button
+                          key={viewKey}
+                          onClick={() => setActiveViews(prev => ({ ...prev, [itemKey]: viewKey }))}
+                          className={`my-0.5 px-1.5 py-0.5 text-xs rounded-md ${isActive ? 'bg-blue-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
+                          title={viewKey.charAt(0).toUpperCase() + viewKey.slice(1)}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -284,7 +268,6 @@ const CheckoutPage: React.FC = () => {
     );
   };
 
-  // Renderizar el resumen del carrito
   const renderCartSummary = () => (
     <div className={`rounded-lg p-4 shadow-md cart-summary-container ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'}`}>
       <h2 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Resumen de la Orden</h2>
@@ -320,7 +303,6 @@ const CheckoutPage: React.FC = () => {
     </div>
   );
 
-  // Renderizar el paso de información de envío
   const renderShippingInfo = () => (
     <form onSubmit={handleNextStep} className="space-y-6">
       <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Información de Envío</h2>
@@ -403,7 +385,6 @@ const CheckoutPage: React.FC = () => {
     </form>
   );
 
-  // Renderizar el paso de información de pago
   const renderPaymentInfo = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Información de Pago</h2>
@@ -499,7 +480,6 @@ const CheckoutPage: React.FC = () => {
     </form>
   );
 
-  // Renderizar el paso de confirmación
   const renderConfirmation = () => (
     <div className="space-y-6 text-center">
       <div className={`mx-auto w-16 h-16 flex items-center justify-center rounded-full ${isDarkMode ? 'bg-green-900' : 'bg-green-100'}`}>

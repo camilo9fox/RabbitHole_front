@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import HTMLCanvasV2 from './HTMLCanvasV2';
-import { CartItem, isStandardItem, isCustomItem, CustomView } from '@/types/cart';
-import { DesignImage, DesignText } from '@/types/product';
+import { CartItem, isStandardItem, isCustomItem } from '@/types/cart';
+import { AdminProduct, DesignImage, DesignText } from '@/types/product';
+import { getDesignSafely } from '@/utils/cartHelpers';
 
 interface CanvasModalProps {
   isOpen: boolean;
@@ -34,6 +35,14 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   
   const [currentAngle, setCurrentAngle] = useState<Angle>('front');
   const [availableAngles, setAvailableAngles] = useState<Angle[]>(['front']);
+  const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([])
+
+  useEffect(() => {
+    const products = localStorage.getItem("admin_products")
+    if (products) {
+      setAdminProducts(JSON.parse(products).products)
+    }
+  }, [localStorage.getItem("admin_products")])
   
 
     const getTshirtHexColor = useCallback((colorId: string): string => {
@@ -128,11 +137,15 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   // Obtener el color de la polera
   const getTshirtColor = (): string => {
     if (isStandardItem(item)) {
-      return getTshirtHexColor(item.product?.color) ?? '#FFFFFF';
+      const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)
+      return getTshirtHexColor(selectedProduct?.selectedColor ?? "white") ?? '#FFFFFF';
     }
     if (isCustomItem(item)) {
-      console.log({COLOR: item.design.color})
-      return getTshirtHexColor(item.design?.color) ?? '#FFFFFF';
+      const design = getDesignSafely(item);
+      if (design?.color) {
+        console.log({COLOR: design.color});
+        return getTshirtHexColor(design.color) ?? '#FFFFFF';
+      }
     }
     return '#FFFFFF'; // Blanco por defecto
   };
@@ -142,6 +155,8 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
     if (isStandardItem(item)) {
       // Para productos estándar, usamos la primera imagen disponible
       const imageUrl = item.product?.images?.[0];
+      const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)
+      console.log({item, selectedProduct})
       if (imageUrl) {
         return {
           src: imageUrl,
@@ -156,9 +171,12 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
         };
       }
     } else if (isCustomItem(item)) {
-      // Para diseños personalizados
-      const angleView = item.design?.[currentAngle] as CustomView | undefined;
-      if (angleView?.image) {
+      // Para diseños personalizados usando acceso seguro
+      const design = getDesignSafely(item);
+      const angleView = design?.[currentAngle];
+      
+      // Verificar que angleView existe y tiene una imagen
+      if (angleView && 'image' in angleView && angleView.image) {
         return {
           src: angleView.image,
           position: {
@@ -178,8 +196,11 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   // Obtener el diseño de texto según el ángulo
   const getDesignText = (): DesignText | undefined => {
     if (isCustomItem(item)) {
-      const angleView = item.design?.[currentAngle] as CustomView | undefined;
-      if (angleView?.text) {
+      const design = getDesignSafely(item);
+      const angleView = design?.[currentAngle];
+      
+      // Verificar que angleView existe y tiene texto
+      if (angleView && 'text' in angleView && angleView.text) {
         return {
           content: angleView.text,
           position: {
@@ -196,9 +217,7 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   };
   
   if (!isOpen) return null;
-  
-  const designImage = getDesignImage();
-  const designText = getDesignText();
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70">
@@ -224,8 +243,8 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
               tshirtImage={getTshirtImage()}
               tshirtColor={getTshirtColor()}
               useColorization={true}
-              designImage={designImage}
-              designText={designText}
+              designImage={getDesignImage()}
+              designText={getDesignText()}
             />
           </div>
           
