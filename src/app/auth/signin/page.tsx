@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Text from '@/components/commons/atoms/Text';
 import Button from '@/components/commons/atoms/Button';
 import { LogIn, KeyRound } from 'lucide-react';
+import Logo from '@/components/commons/atoms/Logo';
 
 export default function SignIn() {
   const router = useRouter();
@@ -129,7 +130,7 @@ export default function SignIn() {
   // Mostrar la página normal de inicio de sesión
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
-      <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8">
+      <div className="max-w-md w-full bg-card rounded-lg shadow-lg border p-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             {/* Logo de Rabbit Hole */}
@@ -137,7 +138,7 @@ export default function SignIn() {
               <div className="absolute w-20 h-20 rounded-full bg-accent/20 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute w-16 h-16 rounded-full bg-accent/40 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute w-12 h-12 rounded-full bg-accent left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">RH</span>
+                <Logo size={120} showText={false}/>
               </div>
             </div>
           </div>
@@ -151,7 +152,7 @@ export default function SignIn() {
 
         <div className="space-y-4">
           <Button
-            variant="primary"
+            variant="secondary"
             className="w-full flex items-center justify-center gap-2 py-3"
             onClick={handleSignIn}
           >

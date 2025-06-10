@@ -34,7 +34,7 @@ const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
           placeholder="Nombre del producto"
           {...register('admin.name', { required: 'El nombre es obligatorio' })}
         />
-        {errors.admin?.name && (
+        {errors.admin && 'name' in errors.admin && (
           <Text variant="small" className="text-red-500 mt-1">
             El nombre es obligatorio
           </Text>
@@ -52,7 +52,7 @@ const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
           rows={3}
           {...register('admin.description', { required: 'La descripción es obligatoria' })}
         />
-        {errors.admin?.description && (
+        {errors.admin && 'description' in errors.admin && (
           <Text variant="small" className="text-red-500 mt-1">
             La descripción es obligatoria
           </Text>
@@ -70,7 +70,7 @@ const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
           placeholder="Categoría del producto (ej: Urbano, Minimalista, etc.)"
           {...register('admin.category', { required: 'La categoría es obligatoria' })}
         />
-        {errors.admin?.category && (
+        {errors.admin && 'category' in errors.admin && (
           <Text variant="small" className="text-red-500 mt-1">
             La categoría es obligatoria
           </Text>

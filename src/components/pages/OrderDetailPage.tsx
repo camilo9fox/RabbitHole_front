@@ -11,7 +11,7 @@ import { getOrderById } from '@/services/orderService';
 import { formatDate, formatPrice } from '@/utils/formatters';
 import OrderStatusBadge from '@/components/commons/atoms/OrderStatusBadge';
 import OrderItemDetail from '@/components/commons/molecules/OrderItemDetail';
-import { CartItemType } from '@/types/cart';
+import { CartItem } from '@/types/cart';
 
 
 
@@ -224,12 +224,16 @@ const OrderDetailPage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Productos</h2>
             
             <div className="space-y-4">
-              {order.items.map((item, index) => (
-                <OrderItemDetail 
-                  key={`order-item-${order.id}-${index}`} 
-                  item={item as unknown as CartItemType} 
-                />
-              ))}
+              {order.items.map((item, index) => {
+                // Convertimos explícitamente el item a CartItem para la correcta tipificación
+                const cartItem: CartItem = item as unknown as CartItem;
+                return (
+                  <OrderItemDetail 
+                    key={`order-item-${order.id}-${index}`} 
+                    item={cartItem} 
+                  />
+                );
+              })}
             </div>
             
             {/* Resumen de costos */}

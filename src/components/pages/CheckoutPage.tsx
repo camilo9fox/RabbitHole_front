@@ -536,7 +536,7 @@ const CheckoutPage: React.FC = () => {
         
         {orderId && (
           <button
-            onClick={() => router.push(`/my-orders/${orderId}`)}
+            onClick={() => router.push(`/order/${orderId}`)}
             className={`inline-flex items-center px-6 py-3 border text-base font-medium rounded-md shadow-sm ${isDarkMode ? 'border-blue-700 text-blue-400 hover:bg-blue-900' : 'border-blue-600 text-blue-600 hover:bg-blue-50'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
           >
             Ver Detalles del Pedido

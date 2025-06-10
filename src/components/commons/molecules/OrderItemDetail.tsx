@@ -2,33 +2,13 @@
 
 import React from 'react';
 import { useTheme } from 'next-themes';
-import { CartItemType } from '@/types/cart';
+import { CartItem, isStandardItem, isCustomItem } from '@/types/cart';
 import { formatPrice } from '@/utils/formatters';
 import Image from 'next/image';
 
 interface OrderItemDetailProps {
-  item: CartItemType;
+  item: CartItem;
 }
-
-type ItemWithProduct = {
-  product?: {
-    images?: string[];
-    name?: string;
-    description?: string;
-  };
-  quantity?: number;
-  price?: number;
-};
-
-type ItemWithDesign = {
-  design?: {
-    front?: {
-      previewImage?: string;
-    };
-  };
-  quantity?: number;
-  price?: number;
-};
 
 const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   const { resolvedTheme } = useTheme();
@@ -36,15 +16,17 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   
   // Determinar la imagen a mostrar según el tipo de ítem
   const getItemImage = (): string => {
-    if ('product' in item) {
-      const productItem = item as unknown as ItemWithProduct;
-      if (productItem.product?.images?.length > 0) {
-        return productItem.product.images[0];
+    if (isStandardItem(item)) {
+      // Ahora TypeScript sabe que item es StandardCartItem
+      const firstImage = item.product?.images?.[0];
+      if (firstImage) {
+        return firstImage;
       }
-    } else if ('design' in item) {
-      const designItem = item as unknown as ItemWithDesign;
-      if (designItem.design?.front?.previewImage) {
-        return designItem.design.front.previewImage;
+    } else if (isCustomItem(item)) {
+      // Ahora TypeScript sabe que item es CustomCartItem
+      const previewImage = item.design?.front?.previewImage;
+      if (previewImage) {
+        return previewImage;
       }
     }
     return '/images/placeholder.png'; // Imagen de respaldo
@@ -52,12 +34,12 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   
   // Determinar el nombre del ítem
   const getItemName = (): string => {
-    if ('product' in item) {
-      const productItem = item as unknown as ItemWithProduct;
-      if (productItem.product?.name) {
-        return productItem.product.name;
+    if (isStandardItem(item)) {
+      const name = item.product?.name;
+      if (name) {
+        return name;
       }
-    } else if ('design' in item) {
+    } else if (isCustomItem(item)) {
       return 'Diseño personalizado';
     }
     return 'Producto';
@@ -65,13 +47,12 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
   
   // Determinar la descripción adicional del ítem
   const getItemDescription = (): string => {
-    if ('product' in item) {
-      const productItem = item as unknown as ItemWithProduct;
-      if (productItem.product?.description) {
-        const desc = productItem.product.description;
+    if (isStandardItem(item)) {
+      const desc = item.product?.description;
+      if (desc) {
         return desc.substring(0, 60) + (desc.length > 60 ? '...' : '');
       }
-    } else if ('design' in item) {
+    } else if (isCustomItem(item)) {
       return 'Polera con diseño personalizado';
     }
     return '';
@@ -102,11 +83,11 @@ const OrderItemDetail: React.FC<OrderItemDetailProps> = ({ item }) => {
         
         <div className="flex justify-between mt-2">
           <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Cantidad: {('quantity' in item ? (item as ItemWithProduct | ItemWithDesign).quantity : 1)}
+            Cantidad: {item.quantity ?? 1}
           </p>
           
           <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            ${formatPrice('price' in item ? (item as ItemWithProduct | ItemWithDesign).price || 0 : 0)}
+            ${formatPrice(item.price ?? 0)}
           </p>
         </div>
       </div>

@@ -34,7 +34,7 @@ const MyOrdersPage: React.FC = () => {
       setLoading(false);
     } else if (status === 'unauthenticated') {
       // Redirigir al login si no está autenticado
-      router.replace('/login');
+      router.replace('/auth/signin');
     }
   }, [session, status, router]);
   
