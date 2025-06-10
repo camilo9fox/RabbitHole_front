@@ -85,7 +85,16 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
     if (isOpen && item) {
       if (isStandardItem(item)) {
         // Para productos estándar solo mostramos el frente por ahora
-        setAvailableAngles(['front']);
+        const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)!
+        const angles: Angle[] = [];
+        
+        ANGLES.forEach((angle) => {
+          if (selectedProduct.angles[angle]?.image || selectedProduct.angles[angle]?.text) {
+            angles.push(angle);
+          }
+        });
+        
+        setAvailableAngles(angles.length > 0 ? angles : ['front']);
       } else if (isCustomItem(item)) {
         // Para diseños personalizados, chequeamos qué ángulos tienen diseño
         const angles: Angle[] = [];
@@ -137,13 +146,11 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   // Obtener el color de la polera
   const getTshirtColor = (): string => {
     if (isStandardItem(item)) {
-      const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)
-      return getTshirtHexColor(selectedProduct?.selectedColor ?? "white") ?? '#FFFFFF';
+      return item.product!.color ?? '#FFFFFF';
     }
     if (isCustomItem(item)) {
       const design = getDesignSafely(item);
       if (design?.color) {
-        console.log({COLOR: design.color});
         return getTshirtHexColor(design.color) ?? '#FFFFFF';
       }
     }
@@ -154,19 +161,19 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   const getDesignImage = (): DesignImage | undefined => {
     if (isStandardItem(item)) {
       // Para productos estándar, usamos la primera imagen disponible
-      const imageUrl = item.product?.images?.[0];
       const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)
       console.log({item, selectedProduct})
-      if (imageUrl) {
+      const angleView = selectedProduct?.angles?.[currentAngle];
+      if (angleView && 'image' in angleView && angleView.image) {
         return {
-          src: imageUrl,
+          src: angleView.image.src,
           position: {
-            x: 250,
-            y: 250
+            x: angleView.image.position.x ?? 250,
+            y: angleView.image.position.y ?? 250
           },
           size: {
-            width: 200,
-            height: 200
+            width: angleView.image.size.width,
+            height: angleView.image.size.height
           }
         };
       }
@@ -195,7 +202,23 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   
   // Obtener el diseño de texto según el ángulo
   const getDesignText = (): DesignText | undefined => {
-    if (isCustomItem(item)) {
+    if (isStandardItem(item)) {
+      const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)
+      const angleView = selectedProduct?.angles?.[currentAngle];
+      if (angleView && 'text' in angleView && angleView.text) {
+        return {
+          content: angleView.text.content,
+          position: {
+            x: angleView.text.position.x ?? 250,
+            y: angleView.text.position.y ?? 250
+          },
+          size: angleView.text.size,
+          font: angleView.text.font,
+          color: angleView.text.color
+        };
+      }
+    }
+    else if (isCustomItem(item)) {
       const design = getDesignSafely(item);
       const angleView = design?.[currentAngle];
       
