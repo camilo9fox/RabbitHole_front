@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
-import HTMLCanvasV2 from './HTMLCanvasV2';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
 import { useTheme } from 'next-themes';
+import HTMLCanvasV2 from './HTMLCanvasV2';
 import { AngleDesign, DesignImage, DesignText } from '@/types/product';
+
+// Interfaz para manejar la referencia del canvas
+export interface ProductCanvasRefHandle {
+  captureCanvas: () => string | null;
+}
 
 interface ProductCanvasProps {
   angle: string;
@@ -12,10 +17,21 @@ interface ProductCanvasProps {
   design?: AngleDesign;
 }
 
-const ProductCanvas = ({ angle, color, className = '', design }: ProductCanvasProps) => {
+const ProductCanvas = forwardRef<ProductCanvasRefHandle, ProductCanvasProps>(({ angle, color, className = '', design }, ref) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
-  const canvasRef = useRef(null);
+  
+  // Usamos any temporalmente para la referencia hasta que podamos definir mejor los tipos
+  // Esto evita errores de tipado al usar la referencia con HTMLCanvasV2
+  const canvasRef = useRef<any>(null);
+  
+  // Exponer el método captureCanvas a través de la referencia
+  useImperativeHandle(ref, () => ({
+    captureCanvas: () => {
+      // Usando encadenamiento opcional para simplificar la comprobación
+      return canvasRef.current?.captureCanvas?.() ?? null;
+    }
+  }));
   
   // Estados para manejar correctamente las propiedades de diseño
   const [processedDesignImage, setProcessedDesignImage] = useState<DesignImage | undefined>(undefined);
@@ -137,6 +153,9 @@ const ProductCanvas = ({ angle, color, className = '', design }: ProductCanvasPr
       </div>
     </div>
   );
-};
+});
+
+// Agregar displayName para eslint
+ProductCanvas.displayName = 'ProductCanvas';
 
 export default ProductCanvas;

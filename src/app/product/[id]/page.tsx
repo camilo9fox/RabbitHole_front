@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { getAdminProductById } from '@/services/adminProductService';
+import ProductCanvas, { ProductCanvasRefHandle } from '@/components/commons/molecules/ProductCanvas';
 import { AdminProduct, AngleDesign } from '@/types/product';
+import { StandardProduct } from '@/types/cart';
 import Text from '@/components/commons/atoms/Text';
 import Button from '@/components/commons/atoms/Button';
 import { useTheme } from 'next-themes';
-import ProductCanvas from '@/components/commons/molecules/ProductCanvas';
 import { useCart } from '@/context/CartContext';
-import { StandardProduct } from '@/types/cart';
 
 // Ángulos disponibles para la visualización del producto
 const ANGLES = ['frente', 'espalda', 'izquierda', 'derecha'];
@@ -59,6 +59,14 @@ export default function ProductDetail() {
   
   // Contador para forzar la recreación del canvas cuando sea necesario
   const canvasKeyCounter = useRef<number>(0);
+  
+  // Referencias para los canvas de cada ángulo
+  const canvasRefs = {
+    frente: useRef<ProductCanvasRefHandle>(null),
+    espalda: useRef<ProductCanvasRefHandle>(null),
+    izquierda: useRef<ProductCanvasRefHandle>(null),
+    derecha: useRef<ProductCanvasRefHandle>(null)
+  };
   const getTshirtHexColor = useCallback((colorId: string): string => {
     switch (colorId) {
       case 'white': return '#FFFFFF';
@@ -109,7 +117,7 @@ export default function ProductDetail() {
       // Imprimir información del producto para depuración
       console.log('Producto cargado:', product);
     }
-  }, [product, selectedColor, selectedSize, currentAngle]);
+  }, [product, selectedColor, selectedSize, currentAngle, getTshirtHexColor]);
 
   // Cargar datos del producto
   useEffect(() => {
@@ -170,9 +178,47 @@ export default function ProductDetail() {
   // Estado para la notificación de éxito
   const [showNotification, setShowNotification] = useState(false);
   
+  // Capturar imagen del canvas para un ángulo específico
+  const captureCanvasImage = (angle: string): string => {
+    try {
+      // Acceder directamente al ref del ángulo específico
+      const canvasRef = canvasRefs[angle as keyof typeof canvasRefs];
+      
+      // Usar encadenamiento opcional para acceso seguro
+      const imageData = canvasRef.current?.captureCanvas();
+      if (imageData) {
+        console.log(`Imagen capturada para ángulo ${angle}`);
+        return imageData;
+      } else {
+        console.warn(`No se pudo capturar imagen para el ángulo ${angle}`);
+      }
+    } catch (error) {
+      console.error(`Error al capturar imagen del canvas para ángulo ${angle}:`, error);
+    }
+    return '';
+  };
+
   // Agregar al carrito
   const handleAddToCart = () => {
     if (!product || !selectedColor || !selectedSize) return;
+    
+    // Capturar imágenes del canvas para todos los ángulos
+    const previewImages: Record<string, string> = {};
+    const capturedImages: string[] = [];
+    
+    // Intentar capturar imágenes para todos los ángulos
+    ANGLES.forEach(angle => {
+      const imageData = captureCanvasImage(angle);
+      if (imageData) {
+        previewImages[angle] = imageData;
+        capturedImages.push(imageData);
+      }
+    });
+    
+    // Usar las imágenes capturadas, o el thumbnail predeterminado si no hay ninguna
+    const productImages = capturedImages.length > 0 
+      ? capturedImages 
+      : [product.thumbnail ?? ''];
     
     // Crear un objeto StandardProduct compatible con el contexto del carrito
     const standardProduct: StandardProduct = {
@@ -180,17 +226,19 @@ export default function ProductDetail() {
       name: product.name,
       description: product.description ?? '',
       price: product.price,
-      images: [product.thumbnail ?? ''],
+      images: productImages,
       color: selectedColor,
       size: selectedSize,
       category: product.category ?? 'Poleras',
-      inStock: true
+      inStock: true,
+      previewImages: previewImages, // Guardar las imágenes de todos los ángulos
+      previewImage: previewImages[currentAngle] || undefined // Imagen del ángulo actual como principal
     };
     
     // Usar el contexto del carrito para agregar el producto
     addStandardItem(standardProduct, quantity);
     
-    console.log('Producto agregado al carrito:', standardProduct);
+    console.log('Producto agregado al carrito con imágenes personalizadas:', standardProduct);
     
     // Mostrar notificación de éxito
     setShowNotification(true);
@@ -430,13 +478,29 @@ export default function ProductDetail() {
           <div className="space-y-8">
             {/* Canvas del producto con colorización dinámica */}
             <div className="h-[650px] w-full flex items-center justify-center">
+              {/* Canvas del ángulo actual */}
               <ProductCanvas 
-                key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`} // Usar contador estable en lugar de timestamp
+                key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`}
                 angle={currentAngle}
                 color={selectedColor ?? '#FFFFFF'}
                 className="w-full h-full max-w-2xl mx-auto"
                 design={getDesignForAngle(currentAngle)}
+                ref={canvasRefs[currentAngle as keyof typeof canvasRefs]}
               />
+              
+              {/* Canvases ocultos para otros ángulos (necesarios para capturar imágenes) */}
+              <div className="hidden">
+                {ANGLES.filter(angle => angle !== currentAngle).map(angle => (
+                  <ProductCanvas
+                    key={`hidden-canvas-${angle}-${selectedColor}`}
+                    angle={angle}
+                    color={selectedColor ?? '#FFFFFF'}
+                    design={getDesignForAngle(angle)}
+                    className="w-0 h-0 overflow-hidden"
+                    ref={canvasRefs[angle as keyof typeof canvasRefs]}
+                  />
+                ))}
+              </div>
             </div>
             
             {/* Selector de ángulos */}

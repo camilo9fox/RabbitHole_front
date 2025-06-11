@@ -55,6 +55,8 @@ export interface StandardProduct {
   size: string;
   category: string;
   inStock: boolean;
+  previewImages?: Record<string, string>; // Imágenes por ángulo capturadas del canvas
+  previewImage?: string; // Imagen principal para mostrar (normalmente del ángulo actual)
 }
 
 // Tipos de items en el carrito

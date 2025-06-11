@@ -3,11 +3,12 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
 import { 
   Cart, 
-  CartItem, 
   CartItemType, 
   StandardProduct, 
   CustomDesign, 
-  CustomDesignStatus 
+  CustomDesignStatus,
+  ProductCartItem,
+  CustomCartItem
 } from '../types/cart';
 
 // Estado inicial del carrito
@@ -36,9 +37,9 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       const existingItemIndex = state.items.findIndex(
         item => item.type === CartItemType.STANDARD && 
                'product' in item && 
-               item.product.id === product.id &&
-               item.product.size === product.size &&
-               item.product.color === product.color
+               item.product?.id === product.id &&
+               item.product?.size === product.size &&
+               item.product?.color === product.color
       );
       
       if (existingItemIndex >= 0) {
@@ -56,11 +57,16 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       }
       
       // Agregar nuevo item si no existe
-      const newItem: CartItem = {
+      const newItem: ProductCartItem = {
+        id: crypto.randomUUID(), // Generar un ID único para este item
         type: CartItemType.STANDARD,
-        product,
+        productId: product.id,
+        color: product.color,
+        size: product.size,
         quantity,
-        price: product.price
+        unitPrice: product.price,
+        price: product.price,
+        product // Mantener el producto completo para compatibilidad
       };
       
       return {
@@ -76,11 +82,14 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       const price = design.price; // Usamos el precio del diseño personalizado
       
       // Los diseños personalizados siempre se agregan como nuevos items
-      const newItem: CartItem = {
+      const newItem: CustomCartItem = {
+        id: design.id || crypto.randomUUID(), // Usar el ID del diseño o generar uno nuevo
         type: CartItemType.CUSTOM,
-        design,
+        designId: design.id,
         quantity,
-        price
+        unitPrice: price,
+        price,
+        design // Mantener el diseño completo para compatibilidad
       };
       
       return {
@@ -97,7 +106,7 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       
       if (!itemToRemove) return state;
       
-      const itemPrice = itemToRemove.price * itemToRemove.quantity;
+      const itemPrice = (itemToRemove.price ?? 0) * itemToRemove.quantity;
       
       return {
         ...state,
@@ -116,7 +125,7 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       
       const updatedItems = [...state.items];
       const item = updatedItems[itemIndex];
-      const priceDifference = item.price * (quantity - item.quantity);
+      const priceDifference = (item.price ?? 0) * (quantity - item.quantity);
       
       updatedItems[itemIndex] = {
         ...item,
@@ -142,7 +151,7 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
         if (
           item.type === CartItemType.CUSTOM && 
           'design' in item && 
-          item.design.id === designId
+          item.design?.id === designId
         ) {
           return {
             ...item,
@@ -196,10 +205,45 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let totalPrice = 0;
         
         if (Array.isArray(parsedCart.items)) {
-          parsedCart.items.forEach(item => {
-            if (item && typeof item.quantity === 'number' && typeof item.price === 'number') {
+          // Definimos un tipo para el item del carrito que puede ser incompleto durante la carga inicial
+          type PartialCartItem = {
+            type: CartItemType;
+            product?: StandardProduct;
+            design?: CustomDesign;
+            quantity: number;
+            price?: number;
+            unitPrice?: number;
+          };
+          
+          parsedCart.items = parsedCart.items.map((item: PartialCartItem) => {
+            // Asegurar que los items cumplan con las interfaces necesarias
+            if (item.type === CartItemType.STANDARD || item.type === CartItemType.PRODUCT) {
+              if (!('productId' in item)) {
+                return {
+                  ...item,
+                  id: item.product?.id ?? crypto.randomUUID(),
+                  productId: item.product?.id ?? '',
+                  unitPrice: item.price ?? 0
+                } as ProductCartItem;
+              }
+            } else if (item.type === CartItemType.CUSTOM) {
+              if (!('designId' in item)) {
+                return {
+                  ...item,
+                  id: item.design?.id ?? crypto.randomUUID(),
+                  designId: item.design?.id ?? '',
+                  unitPrice: item.price ?? 0
+                } as CustomCartItem;
+              }
+            }
+            return item;
+          });
+          
+          // Recalcular totales
+          parsedCart.items.forEach((item: PartialCartItem) => {
+            if (item && typeof item.quantity === 'number') {
               totalItems += item.quantity;
-              totalPrice += item.price * item.quantity;
+              totalPrice += (item.price ?? item.unitPrice ?? 0) * item.quantity;
             }
           });
         }
