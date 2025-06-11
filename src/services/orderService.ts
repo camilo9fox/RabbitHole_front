@@ -59,7 +59,7 @@ export const getAllOrders = (): Order[] => {
     }) as Order[];
     
     console.log('Órdenes recuperadas y procesadas de localStorage:', orders);
-    return orders;
+    return orders; // Corregido aquí
   } catch (error) {
     console.error('Error al recuperar órdenes de localStorage:', error);
     return [];
@@ -106,16 +106,41 @@ export const saveOrder = (
   }
   
   try {
+    // Validamos proactivamente el espacio disponible en localStorage
+    const checkStorageAvailable = () => {
+      try {
+        localStorage.setItem('_test_storage', '1');
+        localStorage.removeItem('_test_storage');
+        return true;
+      } catch (error) {
+        console.warn('LocalStorage puede estar lleno, intentando liberar espacio...', error);
+        return false;
+      }
+    };
+    
+    // Si no hay espacio suficiente, limpiamos las órdenes antiguas
+    if (!checkStorageAvailable()) {
+      // Intentar eliminar órdenes antiguas si hay demasiadas
+      const existingOrders = getAllOrders();
+      if (existingOrders.length > 10) {
+        // Mantener solo las 10 órdenes más recientes
+        const sortedOrders = [...existingOrders]; // Crear una copia antes de ordenar
+        sortedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const recentOrders = sortedOrders.slice(0, 10);
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(recentOrders));
+      }
+    }
+    
     const allOrders = getAllOrders();
     
-    // Crear un nuevo pedido
+    // Crear un nuevo pedido, optimizando lo que se guarda
     const newOrder: Order = {
       id: uuidv4(),
       userId: session?.user?.id ?? "",
       userEmail: session?.user?.email ?? shippingInfo.email,
-      // Transformar CartItem a OrderItem con las propiedades requeridas
+      // Transformar CartItem a OrderItem con solo las propiedades esenciales
       items: cart.items.map(item => {
-        // Crear un objeto que cumpla con la interfaz OrderItem
+        // Crear un objeto simplificado que cumpla con la interfaz OrderItem
         const orderItem: OrderItem = {
           id: item.id,
           type: item.type,
@@ -125,8 +150,28 @@ export const saveOrder = (
           unitPrice: item.unitPrice ?? (item.price ?? 0),
           price: item.price ?? item.unitPrice ?? 0,
           totalPrice: (item.unitPrice ?? item.price ?? 0) * (item.quantity ?? 1),
-          product: 'product' in item ? item.product : undefined,
-          design: 'design' in item ? item.design : undefined,
+          // Solo incluir propiedades esenciales del producto
+          product: 'product' in item ? {
+            id: item.product?.id ?? '',
+            name: item.product?.name ?? '',
+            // Solo incluir propiedades permitidas por la interfaz OrderItem.product
+            color: item.product?.color ?? '',
+            size: item.product?.size ?? '',
+            price: item.product?.price ?? 0,
+            // No incluir imágenes completas ni otros datos pesados
+          } : undefined,
+          // Solo incluir propiedades esenciales del diseño
+          design: 'design' in item ? {
+            id: item.design?.id ?? '',
+            name: item.design?.name ?? '',
+            color: item.design?.color ?? '',
+            size: item.design?.size ?? '',
+            // Simplificar completamente el objeto front para evitar problemas de tipo
+            front: item.design?.front ? {
+              // No guardar datos pesados como URLs completas o base64
+              previewImage: ''
+            } : undefined
+          } : undefined,
           snapshot: {
             name: isCustomItem(item) 
               ? (item.design?.name ?? 'Diseño personalizado') 
@@ -137,17 +182,15 @@ export const saveOrder = (
             size: isCustomItem(item) 
               ? (item.design?.size ?? 'M') 
               : (item.size ?? 'M'),
-            imageUrl: isCustomItem(item) 
-              ? (item.design?.front?.previewImage ?? '') 
-              : (item.product?.images?.[0] ?? '')
+            imageUrl: '' // No guardamos la URL completa para ahorrar espacio
           }
         };
         return orderItem;
       }),
-      subtotal: cart.totalPrice, // Usamos totalPrice como subtotal ya que no tenemos subtotal en Cart
-      shipping: 0, // Valor predeterminado para envío
-      discount: 0, // Valor predeterminado para descuento
-      total: cart.totalPrice, // El total es igual al precio total del carrito
+      subtotal: cart.totalPrice,
+      shipping: 0,
+      discount: 0,
+      total: cart.totalPrice,
       shippingInfo,
       paymentInfo,
       status: OrderStatus.PENDING,
@@ -175,8 +218,22 @@ export const saveOrder = (
     // Agregar el nuevo pedido a la lista
     allOrders.push(newOrder);
     
-    // Guardar en localStorage
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+    // Intentar guardar en localStorage con manejo de errores
+    try {
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+    } catch (storageError) {
+      console.error('Error al guardar en localStorage, intentando con menos datos:', storageError);
+      // Si falla, intentamos guardar con menos datos
+      const simplifiedOrders = allOrders.map(order => ({
+        id: order.id,
+        userEmail: order.userEmail,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt,
+        trackingToken: order.trackingToken
+      }));
+      localStorage.setItem('simplified_' + ORDERS_STORAGE_KEY, JSON.stringify(simplifiedOrders));
+    }
     
     console.log('Pedido guardado:', newOrder);
     return newOrder;
