@@ -188,7 +188,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cart, dispatch] = useReducer(cartReducer, initialCart, () => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : initialCart;
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        
+        // Recalcular totalItems y totalPrice para asegurarnos que sean correctos
+        let totalItems = 0;
+        let totalPrice = 0;
+        
+        if (Array.isArray(parsedCart.items)) {
+          parsedCart.items.forEach(item => {
+            if (item && typeof item.quantity === 'number' && typeof item.price === 'number') {
+              totalItems += item.quantity;
+              totalPrice += item.price * item.quantity;
+            }
+          });
+        }
+        
+        return {
+          ...parsedCart,
+          totalItems,
+          totalPrice
+        };
+      }
+      return initialCart;
     }
     return initialCart;
   });
