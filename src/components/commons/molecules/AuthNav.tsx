@@ -63,14 +63,14 @@ const renderMobileAuthenticatedContent = (session: Session | null, isDarkMode: b
         </div>
       </Link>
       
-      <Link href="/account/orders" className="block w-full">
+      <Link href="/my-orders" className="block w-full">
         <div className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
           <ShoppingBag className="h-4 w-4" />
           <span className="text-sm font-medium">Mis pedidos</span>
         </div>
       </Link>
       
-      <Link href="/account/settings" className="block w-full">
+      <Link href="/settings" className="block w-full">
         <div className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
           <Settings className="h-4 w-4" />
           <span className="text-sm font-medium">Configuración</span>
@@ -115,14 +115,14 @@ const renderUserMenu = (session: Session | null, isDarkMode: boolean) => {
         </div>
       </Link>
       
-      <Link href="/account/orders" className="block w-full">
+      <Link href="/my-orders" className="block w-full">
         <div className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
           <ShoppingBag className="h-4 w-4" />
           <span className="text-sm font-medium">Mis pedidos</span>
         </div>
       </Link>
       
-      <Link href="/account/settings" className="block w-full">
+      <Link href="/settings" className="block w-full">
         <div className={`flex items-center gap-2 px-4 py-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
           <Settings className="h-4 w-4" />
           <span className="text-sm font-medium">Configuración</span>

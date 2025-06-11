@@ -83,30 +83,7 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   // Al abrir el modal, determinamos qué ángulos están disponibles para este item
   useEffect(() => {
     if (isOpen && item) {
-      if (isStandardItem(item)) {
-        // Para productos estándar solo mostramos el frente por ahora
-        const selectedProduct = adminProducts.find(product => product.id === item?.product?.id)!
-        const angles: Angle[] = [];
-        
-        ANGLES.forEach((angle) => {
-          if (selectedProduct.angles[angle]?.image || selectedProduct.angles[angle]?.text) {
-            angles.push(angle);
-          }
-        });
-        
-        setAvailableAngles(angles.length > 0 ? angles : ['front']);
-      } else if (isCustomItem(item)) {
-        // Para diseños personalizados, chequeamos qué ángulos tienen diseño
-        const angles: Angle[] = [];
-        
-        ANGLES.forEach((angle) => {
-          if (item.design?.[angle as keyof typeof item.design]) {
-            angles.push(angle);
-          }
-        });
-        
-        setAvailableAngles(angles.length > 0 ? angles : ['front']);
-      }
+      setAvailableAngles(['front','back','left','right'])
       
       // Siempre comenzamos con el frente
       setCurrentAngle('front');
