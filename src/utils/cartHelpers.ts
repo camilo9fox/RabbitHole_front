@@ -62,32 +62,88 @@ export const getDesignSafely = (item: CartItem | OrderItem): CustomDesign | null
 /**
  * Obtiene de forma segura la imagen del producto o diseño para mostrar
  */
-export const getImageUrlFromItem = (item: CartItem | OrderItem | SafeCartItem): string => {
-  return getItemImageSafely(item);
+export const getImageUrlFromItem = (item: CartItem | OrderItem | SafeCartItem, activeView?: string): string => {
+  return getItemImageSafely(item, activeView);
 }
 
 /**
  * Obtiene de forma segura la imagen del producto o diseño para mostrar (función original)
  */
-export const getItemImageSafely = (item: CartItem | OrderItem | SafeCartItem): string => {
+export const getItemImageSafely = (item: CartItem | OrderItem | SafeCartItem, activeView?: string): string => {
   const fallbackImage = '/assets/products/placeholder.png';
+  const view = activeView || 'front'; // Vista por defecto es 'front'
 
   if (!item) return fallbackImage;
 
   // Caso producto estándar
-  if ('product' in item && item.product?.images?.length) {
-    return item.product.images[0];
+  if ('product' in item && item.product) {
+    // Para productos estándar, necesitamos manejar diferentes ángulos
+    const product = item.product;
+    const images = product.images || [];
+    
+    // Si hay previewImages y existe la vista activa
+    if ('previewImages' in product && 
+        product.previewImages && 
+        typeof product.previewImages === 'object' && 
+        view in product.previewImages) {
+      return product.previewImages[view] as string;
+    }
+    
+    // Alternativa: intentar encontrar la imagen que contenga el nombre de la vista
+    // (por ejemplo, "front", "back", etc.) en su URL
+    if (images.length > 0) {
+      // Buscar imagen por nombre de vista en la URL
+      const matchingImage = images.find(img => 
+        typeof img === 'string' && 
+        (img.toLowerCase().includes(`_${view}.`) || 
+         img.toLowerCase().includes(`/${view}.`) ||
+         img.toLowerCase().includes(`-${view}.`))
+      );
+      
+      if (matchingImage) {
+        return matchingImage;
+      }
+      
+      // Si hay múltiples imágenes, intentar asignarlas por posición
+      if (images.length >= 2) {
+        // Asumimos un orden: frente, espalda, izquierda, derecha
+        switch(view) {
+          case 'front': return images[0];
+          case 'back': return images.length > 1 ? images[1] : images[0];
+          case 'left': return images.length > 2 ? images[2] : images[0];
+          case 'right': return images.length > 3 ? images[3] : images[0];
+          default: return images[0];
+        }
+      }
+      
+      // Si solo hay una imagen, usarla para todas las vistas
+      return images[0];
+    }
   }
 
   // Caso diseño personalizado
   if ('design' in item && item.design) {
     const design = item.design;
     
+    // Intentar obtener la vista solicitada
+    if (view in design) {
+      const viewData = design[view as keyof typeof design];
+      
+      if (viewData) {
+        if (typeof viewData === 'object' && viewData !== null) {
+          // Si es un objeto CustomView con previewImage o image
+          const viewObj = viewData as any;
+          return viewObj.previewImage || viewObj.image || fallbackImage;
+        }
+        return String(viewData) ?? fallbackImage;
+      }
+    }
+    
+    // Fallback a vista frontal si la solicitada no existe
     if ('front' in design && design.front) {
       if (typeof design.front === 'object' && design.front !== null) {
-        // Si front es un objeto CustomView
-        // @ts-expect-error - Sabemos que puede tener estas propiedades
-        return design.front.previewImage || design.front.image || fallbackImage;
+        const frontObj = design.front as any;
+        return frontObj.previewImage || frontObj.image || fallbackImage;
       }
       return String(design.front) ?? fallbackImage;
     }

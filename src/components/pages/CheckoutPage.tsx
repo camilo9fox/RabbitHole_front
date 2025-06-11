@@ -190,8 +190,24 @@ const CheckoutPage: React.FC = () => {
     return (
       <ul className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
         {cart.items.map((item, index) => {
+          // Obtener una clave única para este item
+          const itemKey = isProductItem(item)
+            ? `standard-${getProductSafely(item)?.id ?? index}`
+            : `custom-${getDesignSafely(item)?.id ?? index}`;
+        
+          // Si no hay una vista activa para este item, inicializar con 'front'
+          if (!activeViews[itemKey]) {
+            setActiveViews(prev => ({
+              ...prev,
+              [itemKey]: 'front'
+            }));
+          }
+        
+          // Obtener la vista activa para este item
+          const activeView = activeViews[itemKey] || 'front';
+        
           // Usar las funciones utilitarias para obtener datos seguros
-          const image = getImageUrlFromItem(item);
+          const image = getImageUrlFromItem(item, activeView);
           const name = getNameFromItem(item);
           const price = getPriceFromItem(item);
           const details = getDetailsFromItem(item);
@@ -200,9 +216,6 @@ const CheckoutPage: React.FC = () => {
           const isCustom = isCustomItem(item);
           const product = getProductSafely(item);
           const design = getDesignSafely(item);
-          const itemKey = isProductItem(item)
-            ? `standard-${product?.id ?? index}`
-            : `custom-${design?.id ?? index}`;
           
           return (
             <li key={itemKey} className="py-4 flex overflow-hidden cart-item-container w-full">
@@ -217,11 +230,12 @@ const CheckoutPage: React.FC = () => {
                   />
                 </div>
                 
-                {/* Botones de navegación entre vistas para diseños personalizados */}
-                {isCustom && design && (
-                  <div className="ml-2 flex flex-col justify-center">
-                    {getDesignViewsSafely(design).map((viewKey: string) => {
-                      const isActive = activeViews[itemKey] === viewKey || (!activeViews[itemKey] && viewKey === 'front'); // Aquí OR es correcto porque evaluamos condición booleana
+                {/* Botones de navegación entre vistas para todos los productos */}
+                <div className="ml-2 flex flex-col justify-center">
+                  {/* Para diseños personalizados: usar vistas del diseño */}
+                  {isCustom && design && (
+                    getDesignViewsSafely(design).map((viewKey: string) => {
+                      const isActive = activeView === viewKey;
                       let label = '';
                       if (viewKey === 'front') label = 'F';
                       else if (viewKey === 'back') label = 'E';
@@ -238,9 +252,32 @@ const CheckoutPage: React.FC = () => {
                           {label}
                         </button>
                       );
-                    })}
-                  </div>
-                )}
+                    })
+                  )}
+                  
+                  {/* Para productos estándar: mostrar siempre los 4 ángulos principales */}
+                  {!isCustom && product && (
+                    ['front', 'back', 'left', 'right'].map((viewKey: string) => {
+                      const isActive = activeView === viewKey;
+                      let label = '';
+                      if (viewKey === 'front') label = 'F';
+                      else if (viewKey === 'back') label = 'E';
+                      else if (viewKey === 'left') label = 'I';
+                      else if (viewKey === 'right') label = 'D';
+                      
+                      return (
+                        <button
+                          key={viewKey}
+                          onClick={() => setActiveViews(prev => ({ ...prev, [itemKey]: viewKey }))}
+                          className={`my-0.5 px-1.5 py-0.5 text-xs rounded-md ${isActive ? 'bg-blue-600 text-white font-bold' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
+                          title={viewKey.charAt(0).toUpperCase() + viewKey.slice(1)}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>  
               </div>
               <div className="ml-4 flex flex-1 flex-col overflow-hidden">
                 <div className={`flex justify-between text-base font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} cart-item-title min-w-0`}>
