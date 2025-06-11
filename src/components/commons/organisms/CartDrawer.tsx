@@ -17,11 +17,19 @@ interface CartDrawerProps {
 
 // Mapeo de IDs a etiquetas legibles para las vistas
 const VIEW_LABELS: Record<string, string> = {
+  'frente': 'Frente',
+  'espalda': 'Espalda',
+  'izquierda': 'Izq',
+  'derecha': 'Der',
+  // Mantener compatibilidad con los nombres en inglés
   'front': 'Frente',
   'back': 'Espalda',
   'left': 'Izq',
   'right': 'Der'
 };
+
+// Mapeo de ángulos disponibles (consistente con ANGLES en la página de producto)
+const ANGLES = ['frente', 'espalda', 'izquierda', 'derecha'];
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const { cart, updateQuantity, removeItem } = useCart();
@@ -86,6 +94,14 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // Manejar el cambio de vista/ángulo
+  const handleViewChange = (itemKey: string, viewId: string) => {
+    setActiveViews(prev => ({
+      ...prev,
+      [itemKey]: viewId
+    }));
+  };
+
   // Función auxiliar para generar keys únicas para items del carrito
   const getCartItemKey = (item: CartItem, index: number): string => {
     if (isStandardItem(item)) {
@@ -97,7 +113,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   };
 
   // Función auxiliar para obtener las vistas personalizadas válidas de un diseño
-  const getCustomizedViews = (design: CustomDesign): { id: string; label: string; image: string }[] => {
+  const getCustomizedViews = (design?: CustomDesign): { id: string; label: string; image: string }[] => {
     if (!design) return [];
     
     const result: { id: string; label: string; image: string }[] = [];
@@ -128,7 +144,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   // Función auxiliar para obtener detalles del item personalizado
   const getCustomItemDetails = (design: CustomDesign): string => {
-    let details = `${design.color} / Talla ${design.size.toUpperCase()}`;
+    let details = `${design.color ?? 'Sin color'} / Talla ${design?.size?.toUpperCase() ?? 'N/A'}`;
     
     // Agregar estado de aprobación si existe
     if (design.status === CustomDesignStatus.PENDING) {
@@ -147,34 +163,90 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     // Para productos estándar
     if (isStandardItem(item)) {
       const { product } = item;
+      // Generar una clave única para este item
+      const itemKey = getCartItemKey(item, index);
+      
+      // Si no hay una vista activa para este item, usar 'frente' por defecto
+      if (!activeViews[itemKey]) {
+        setActiveViews(prev => ({
+          ...prev,
+          [itemKey]: 'frente'
+        }));
+      }
+      
+      // Obtener la vista activa o usar 'frente' por defecto
+      const activeView = activeViews[itemKey] || 'frente';
+      
+      // Obtener la imagen según la vista activa
+      const getImageSource = () => {
+        if (product?.previewImages?.[activeView]) {
+          return product.previewImages[activeView];
+        }
+        return product?.images?.[0] ?? '/assets/products/placeholder.png';
+      };
+      
       return (
-        <li key={getCartItemKey(item, index)} className="py-6 flex">
-          <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
-            <div className="relative h-full w-full">
-              <Image
-                src={product.images[0] || '/assets/products/placeholder.png'}
-                alt={product.name}
-                fill
-                sizes="(max-width: 768px) 100px, 150px"
-                className="object-cover object-center"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/assets/products/placeholder.png';
-                }}
-              />
+        <li key={itemKey} className="py-6 flex">
+          <div className="flex flex-col">
+            <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
+              <div className="relative h-full w-full">
+                <Image
+                  src={getImageSource()}
+                  alt={`${product.name} - ${activeView}`}
+                  fill
+                  sizes="(max-width: 768px) 100px, 150px"
+                  className="object-cover object-center"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/assets/products/placeholder.png';
+                  }}
+                />
+              </div>
             </div>
+            
+            {/* Selector de ángulos para productos estándar */}
+            {ANGLES.length > 0 && (
+              <div className="flex gap-1 my-2">
+                {ANGLES.map((angle) => {
+                  // Preparar las clases CSS de manera más legible
+                  let buttonClasses = "text-xs px-1 py-0.5 rounded ";
+                  
+                  if (activeView === angle) {
+                    // Vista activa
+                    buttonClasses += isDarkMode
+                      ? 'bg-blue-700 text-white'
+                      : 'bg-blue-600 text-white';
+                  } else {
+                    // Vista inactiva
+                    buttonClasses += isDarkMode
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300';
+                  }
+                  
+                  return (
+                    <button
+                      key={angle}
+                      onClick={() => handleViewChange(itemKey, angle)}
+                      className={buttonClasses}
+                    >
+                      {VIEW_LABELS[angle] ?? angle}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="ml-4 flex flex-1 flex-col">
             <div>
               <div className="flex justify-between text-base font-medium">
-                <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>{product.name}</h3>
+                <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>{product?.name || 'Producto'}</h3>
                 <p className={`ml-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
-                  {formatPrice(product.price * item.quantity)}
+                  {formatPrice((product?.price || 0) * item.quantity)}
                 </p>
               </div>
               <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {`${product.color} / Talla ${product.size.toUpperCase()}`}
+                {product ? `${product.color} / Talla ${product.size?.toUpperCase() || 'N/A'}` : 'Información no disponible'}
               </p>
             </div>
             <div className="flex flex-1 items-end justify-between text-sm">
@@ -239,13 +311,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       // Encontrar la vista activa en las vistas personalizadas
       const currentView = customizedViews.find(view => view.id === activeView) || customizedViews[0];
       
-      // Manejar el cambio de vista
-      const handleViewChange = (viewId: string) => {
-        setActiveViews(prev => ({
-          ...prev,
-          [itemKey]: viewId
-        }));
-      };
+      // Usar la implementación global de handleViewChange para mantener consistencia
       
       return (
         <li key={itemKey} className="py-6 flex">
@@ -253,15 +319,15 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             <div className={`h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}>
               <div className="relative h-full w-full">
                 <Image
-                  src={currentView?.image || '/assets/products/white-tshirt/white-tshirt-frente.png'}
-                  alt={`Diseño personalizado - ${currentView?.id || 'frente'}`}
+                  src={currentView?.image ?? '/assets/products/placeholder.png'}
+                  alt={`Vista ${currentView?.label ?? 'Personalizada'}`}
                   fill
                   sizes="(max-width: 768px) 100px, 150px"
                   className="object-cover object-center"
                   onError={(e) => {
                     // Fallback para imágenes que no cargan
                     const target = e.target as HTMLImageElement;
-                    target.src = '/assets/products/white-tshirt/white-tshirt-frente.png';
+                    target.src = '/assets/products/placeholder.png';
                   }}
                 />
               </div>
@@ -269,28 +335,30 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             
             {/* Selector de vistas para diseños personalizados con múltiples vistas */}
             {customizedViews.length > 1 && (
-              <div className="mt-2 flex justify-center space-x-1">
+              <div className="flex gap-1 my-2">
                 {customizedViews.map((view) => {
-                  // Determinar la clase de estilo para el botón
-                  let buttonClass = 'px-1 py-0.5 text-xs rounded ';
+                  // Preparar las clases CSS de manera más legible
+                  let buttonClasses = "text-xs px-1 py-0.5 rounded ";
                   
-                  // Botón activo
                   if (activeView === view.id) {
-                    buttonClass += isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white';
-                  } 
-                  // Botón inactivo
-                  else {
-                    buttonClass += isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700';
+                    // Vista activa
+                    buttonClasses += isDarkMode
+                      ? 'bg-blue-700 text-white'
+                      : 'bg-blue-600 text-white';
+                  } else {
+                    // Vista inactiva
+                    buttonClasses += isDarkMode
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300';
                   }
                   
                   return (
                     <button
                       key={view.id}
-                      onClick={() => handleViewChange(view.id)}
-                      className={buttonClass}
-                      title={`Ver ${view.label}`}
+                      onClick={() => handleViewChange(itemKey, view.id)}
+                      className={buttonClasses}
                     >
-                      {view.label}
+                      {VIEW_LABELS[view.id] ?? view.id}
                     </button>
                   );
                 })}
@@ -303,11 +371,11 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               <div className="flex justify-between text-base font-medium">
                 <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>Polera Personalizada</h3>
                 <p className={`ml-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
-                  {formatPrice(item.price * item.quantity)}
+                  {formatPrice((item.price || 0) * item.quantity)}
                 </p>
               </div>
               <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {getCustomItemDetails(design)}
+                {design && getCustomItemDetails(design)}
               </p>
             </div>
             <div className="flex flex-1 items-end justify-between text-sm">
