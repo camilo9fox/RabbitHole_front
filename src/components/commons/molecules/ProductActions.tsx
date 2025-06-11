@@ -19,9 +19,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   isDeleting,
   onCancelDelete
 }) => {
-  const storeButtonVariant = product.inStore ? 'warning' : 'success';
-  const storeButtonText = product.inStore ? 'Quitar' : 'Publicar';
-  const storeButtonTitle = product.inStore ? 'Quitar producto de la tienda' : 'Publicar producto en la tienda';
+  const storeButtonVariant = product.inStock ? 'warning' : 'success';
+  const storeButtonText = product.inStock ? 'Quitar' : 'Publicar';
+  const storeButtonTitle = product.inStock ? 'Quitar producto de la tienda' : 'Publicar producto en la tienda';
   
   return (
     <div className="flex flex-wrap gap-1 justify-center items-center">

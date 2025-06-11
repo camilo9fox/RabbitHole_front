@@ -7,7 +7,7 @@ import { AdminProduct } from '@/types/product';
 import { 
   getAdminProducts, 
   deleteAdminProduct, 
-  toggleProductInStore
+  toggleProductInStock
 } from '@/services/adminProductService';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/commons/atoms/Button';
@@ -57,8 +57,8 @@ export default function AdminProductsPage() {
     loadProducts();
   };
   
-  const handleToggleInStore = (id: string) => {
-    const product = toggleProductInStore(id);
+  const handleToggleInStock = (id: string) => {
+    const product = toggleProductInStock(id);
     if (product) {
       loadProducts();
     }
@@ -92,7 +92,7 @@ export default function AdminProductsPage() {
     {
       id: 'status',
       header: 'Estado',
-      accessor: (product) => <StatusCell inStore={product.inStore} />,
+      accessor: (product) => <StatusCell inStock={product.inStock} />,
     },
     {
       id: 'createdAt',
@@ -109,7 +109,7 @@ export default function AdminProductsPage() {
         product={product} 
         onEdit={() => handleEditProduct(product.id)} 
         onDelete={() => handleDeleteProduct(product.id)} 
-        onToggleStore={() => handleToggleInStore(product.id)}
+        onToggleStore={() => handleToggleInStock(product.id)}
         isDeleting={isDeleting}
         onCancelDelete={() => isDeleting ? setDeleteConfirmId(null) : setDeleteConfirmId(product.id)}
       />

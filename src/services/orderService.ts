@@ -1,7 +1,7 @@
 "use client";
 
 import { v4 as uuidv4 } from 'uuid';
-import { Order, OrderStatus, StatusHistoryEntry, ShippingInfo, PaymentInfo } from '@/types/order';
+import { Order, OrderItem, OrderStatus, StatusHistoryEntry, ShippingInfo, PaymentInfo } from '@/types/order';
 import { Cart, CustomDesignStatus, isCustomItem } from '@/types/cart';
 import { Session } from 'next-auth';
 
@@ -48,7 +48,7 @@ export const getAllOrders = (): Order[] => {
         ...order,
         createdAt: new Date(createdAtString),
         updatedAt: new Date(updatedAtString),
-        statusHistory: (order.statusHistory || []).map((entry) => {
+        statusHistory: (order.statusHistory ?? []).map((entry) => {
           const dateString = typeof entry.date === 'string' ? entry.date : new Date().toISOString();
           return {
             ...entry,
@@ -113,7 +113,37 @@ export const saveOrder = (
       id: uuidv4(),
       userId: session?.user?.id ?? "",
       userEmail: session?.user?.email ?? shippingInfo.email,
-      items: [...cart.items],
+      // Transformar CartItem a OrderItem con las propiedades requeridas
+      items: cart.items.map(item => {
+        // Crear un objeto que cumpla con la interfaz OrderItem
+        const orderItem: OrderItem = {
+          id: item.id,
+          type: item.type,
+          productId: 'productId' in item ? item.productId : undefined,
+          designId: 'designId' in item ? item.designId : undefined,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice ?? (item.price ?? 0),
+          price: item.price ?? item.unitPrice ?? 0,
+          totalPrice: (item.unitPrice ?? item.price ?? 0) * (item.quantity ?? 1),
+          product: 'product' in item ? item.product : undefined,
+          design: 'design' in item ? item.design : undefined,
+          snapshot: {
+            name: isCustomItem(item) 
+              ? (item.design?.name ?? 'Diseño personalizado') 
+              : (item.product?.name ?? 'Producto'),
+            color: isCustomItem(item) 
+              ? (item.design?.color ?? 'blanco') 
+              : (item.color ?? 'blanco'),
+            size: isCustomItem(item) 
+              ? (item.design?.size ?? 'M') 
+              : (item.size ?? 'M'),
+            imageUrl: isCustomItem(item) 
+              ? (item.design?.front?.previewImage ?? '') 
+              : (item.product?.images?.[0] ?? '')
+          }
+        };
+        return orderItem;
+      }),
       subtotal: cart.totalPrice, // Usamos totalPrice como subtotal ya que no tenemos subtotal en Cart
       shipping: 0, // Valor predeterminado para envío
       discount: 0, // Valor predeterminado para descuento
@@ -177,7 +207,7 @@ export const updateOrderStatus = (
   const historyEntry: StatusHistoryEntry = {
     status,
     date: new Date(),
-    note: note || undefined
+    note: note === '' ? undefined : note
   };
   
   updatedOrder.statusHistory = [
@@ -226,15 +256,26 @@ export const approveCustomDesign = (
   
   // Buscar y actualizar el item con el diseño personalizado
   const updatedItems = updatedOrder.items.map(item => {
-    if (isCustomItem(item) && item.design.id === designId) {
-      return {
+    if (isCustomItem(item) && item.design?.id === designId) {
+      // Obtenemos los datos completos del diseño y lo actualizamos
+      const updatedDesign = {
+        ...item.design,
+        status: CustomDesignStatus.APPROVED,
+        updatedAt: new Date()
+      };
+
+      // Creamos una copia tipada para OrderItem con solo las propiedades permitidas en design
+      const updatedItem: OrderItem = {
         ...item,
         design: {
-          ...item.design,
-          status: CustomDesignStatus.APPROVED,
-          updatedAt: new Date()
+          id: updatedDesign.id!, // Forzamos el tipo porque sabemos que existe (verificado en la condición if)
+          name: updatedDesign.name,
+          color: updatedDesign.color,
+          size: updatedDesign.size,
+          front: updatedDesign.front
         }
       };
+      return updatedItem;
     }
     return item;
   });
@@ -282,16 +323,27 @@ export const rejectCustomDesign = (
   
   // Buscar y actualizar el item con el diseño personalizado
   const updatedItems = updatedOrder.items.map(item => {
-    if (isCustomItem(item) && item.design.id === designId) {
-      return {
+    if (isCustomItem(item) && item.design?.id === designId) {
+      // Obtenemos los datos completos del diseño y lo actualizamos
+      const updatedDesign = {
+        ...item.design,
+        status: CustomDesignStatus.REJECTED,
+        rejectionReason: rejectionReason ?? 'Diseño rechazado por el administrador',
+        updatedAt: new Date()
+      };
+
+      // Creamos una copia tipada para OrderItem con solo las propiedades permitidas en design
+      const updatedItem: OrderItem = {
         ...item,
         design: {
-          ...item.design,
-          status: CustomDesignStatus.REJECTED,
-          rejectionReason: rejectionReason ?? 'Diseño rechazado por el administrador',
-          updatedAt: new Date()
+          id: updatedDesign.id!, // Forzamos el tipo porque sabemos que existe (verificado en la condición if)
+          name: updatedDesign.name,
+          color: updatedDesign.color,
+          size: updatedDesign.size,
+          front: updatedDesign.front
         }
       };
+      return updatedItem;
     }
     return item;
   });

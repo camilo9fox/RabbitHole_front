@@ -69,9 +69,11 @@ export const saveAdminProduct = (product: Partial<AdminProduct>): AdminProduct =
         left: {},
         right: {}
       },
-      inStore: product.inStore ?? false, // Por defecto, los productos no están en la tienda
-      createdAt: product.createdAt ?? Date.now(),
-      updatedAt: Date.now()
+      inStock: product.inStock ?? false, // Por defecto, los productos no están disponibles en stock
+      colors: product.colors ?? ['#FFFFFF'],
+      sizes: product.sizes ?? ['S', 'M', 'L', 'XL'],
+      createdAt: product.createdAt ?? new Date(),
+      updatedAt: new Date()
     };
     
     console.log('Nuevo producto a guardar:', newProduct);
@@ -107,7 +109,7 @@ export const updateAdminProduct = (product: AdminProduct): AdminProduct => {
   
   const updatedProduct = {
     ...product,
-    updatedAt: Date.now()
+    updatedAt: new Date()
   };
   
   const updatedProducts = products.map(p => 
@@ -199,7 +201,7 @@ export const imageToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// Función para añadir un producto a la tienda
+// Función para marcar un producto como disponible en stock
 export const addProductToStore = (id: string): AdminProduct | null => {
   const product = getAdminProductById(id);
   
@@ -209,14 +211,14 @@ export const addProductToStore = (id: string): AdminProduct | null => {
   
   const updatedProduct: AdminProduct = {
     ...product,
-    inStore: true,
-    updatedAt: Date.now()
+    inStock: true,
+    updatedAt: new Date()
   };
   
   return updateAdminProduct(updatedProduct);
 };
 
-// Función para quitar un producto de la tienda
+// Función para marcar un producto como no disponible en stock
 export const removeProductFromStore = (id: string): AdminProduct | null => {
   const product = getAdminProductById(id);
   
@@ -226,27 +228,27 @@ export const removeProductFromStore = (id: string): AdminProduct | null => {
   
   const updatedProduct: AdminProduct = {
     ...product,
-    inStore: false,
-    updatedAt: Date.now()
+    inStock: false,
+    updatedAt: new Date()
   };
   
   return updateAdminProduct(updatedProduct);
 };
 
-// Función para obtener todos los productos en la tienda
+// Función para obtener todos los productos disponibles en stock
 export const getStoreProducts = (): AdminProduct[] => {
   const products = getAdminProducts();
-  return products.filter(product => product.inStore === true);
+  return products.filter(product => product.inStock === true);
 };
 
-// Función para obtener todos los productos que no están en la tienda
+// Función para obtener todos los productos que no están disponibles en stock
 export const getNonStoreProducts = (): AdminProduct[] => {
   const products = getAdminProducts();
-  return products.filter(product => product.inStore !== true);
+  return products.filter(product => product.inStock !== true);
 };
 
-// Función para alternar el estado inStore de un producto
-export const toggleProductInStore = (id: string): AdminProduct | null => {
+// Función para alternar el estado inStock de un producto
+export const toggleProductInStock = (id: string): AdminProduct | null => {
   const product = getAdminProductById(id);
   
   if (!product) {
@@ -255,8 +257,8 @@ export const toggleProductInStore = (id: string): AdminProduct | null => {
   
   const updatedProduct: AdminProduct = {
     ...product,
-    inStore: !product.inStore,
-    updatedAt: Date.now()
+    inStock: !product.inStock,
+    updatedAt: new Date()
   };
   
   return updateAdminProduct(updatedProduct);

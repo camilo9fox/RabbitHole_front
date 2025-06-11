@@ -94,31 +94,31 @@ const OrderCard: React.FC<OrderCardProps> = ({
                     {isCustomItem(item) ? (
                       // Item personalizado
                       <>
-                        <p className="font-medium">Diseño personalizado: {item.design.name || `Diseño #${idx + 1}`}</p>
+                        <p className="font-medium">Diseño personalizado: {item.design?.name || `Diseño #${idx + 1}`}</p>
                         <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                           Cantidad: {item.quantity} × ${formatPrice(item.price)}
                         </p>
                         <div className={`mt-1 p-1 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
-                          <p className="text-xs font-medium">Estado: {item.design.status}</p>
-                          {item.design.rejectionReason && (
+                          <p className="text-xs font-medium">Estado: {item.design?.status}</p>
+                          {item.design?.rejectionReason && (
                             <p className="text-xs mt-1">Motivo rechazo: {item.design.rejectionReason}</p>
                           )}
-                          {item.design.modificationNotes && (
-                            <p className="text-xs mt-1">Notas: {item.design.modificationNotes}</p>
+                          {item.design?.modificationNotes && (
+                            <p className="text-xs mt-1">Notas: {item.design?.modificationNotes}</p>
                           )}
                         </div>
                       </>
                     ) : (
                       // Item estándar
                       <>
-                        <p className="font-medium">{item.product.name}</p>
+                        <p className="font-medium">{item.product?.name}</p>
                         <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          Cantidad: {item.quantity} × ${formatPrice(item.product.price)}
+                          Cantidad: {item.quantity} × ${formatPrice(item.product?.price ?? 0)}
                         </p>
                       </>
                     )}
                   </div>
-                  <p className="font-medium">${formatPrice(item.price * item.quantity)}</p>
+                  <p className="font-medium">${formatPrice((item.price ?? 0) * item.quantity)}</p>
                 </div>
               </div>
             ))}

@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface DateFormatterProps {
-  timestamp: number;
+  timestamp: number | Date;
   format?: 'short' | 'medium' | 'long';
   className?: string;
 }
@@ -12,7 +12,7 @@ const DateFormatter: React.FC<DateFormatterProps> = ({
   className = ''
 }) => {
   const formatDate = () => {
-    const date = new Date(timestamp);
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     
     switch (format) {
       case 'short':

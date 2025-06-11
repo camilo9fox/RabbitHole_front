@@ -203,18 +203,14 @@ export default function ProductDetail() {
 
   // Renderizar selector de colores
   const renderColorSelector = () => {
-    if (!product?.colors?.length) {
-      console.log('No hay colores disponibles para mostrar el selector');
-      return null;
-    }
-    
-    console.log('Renderizando selector de colores con:', product.colors);
+    // Mostramos todos los colores disponibles en colorOptions
+    console.log('Renderizando selector de colores con todas las opciones disponibles');
 
     return (
       <div className="mt-6">
         <Text variant="h5" className="mb-2 font-medium">Color</Text>
         <div className="flex flex-wrap gap-3">
-          {colorOptions.filter(option => product.colors?.includes(option.value)).map((colorOption) => {
+          {colorOptions.map((colorOption) => {
             const color = colorOption.value;
             const label = colorOption.label;
             
@@ -258,18 +254,14 @@ export default function ProductDetail() {
 
   // Renderizar selector de tallas
   const renderSizeSelector = () => {
-    if (!product?.sizes?.length) {
-      console.log('No hay tallas disponibles para mostrar el selector');
-      return null;
-    }
-    
-    console.log('Renderizando selector de tallas con:', product.sizes);
+    // Mostramos todas las tallas disponibles en sizeOptions
+    console.log('Renderizando selector de tallas con todas las opciones disponibles');
 
     return (
       <div className="mt-6">
         <Text variant="h5" className="mb-2 font-medium">Talla</Text>
         <div className="flex flex-wrap gap-3">
-          {sizeOptions.filter(option => product.sizes?.includes(option.label)).map((sizeOption) => {
+          {sizeOptions.map((sizeOption) => {
             const size = sizeOption.label;
             
             // Determinar las clases basadas en la selección y el tema

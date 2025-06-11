@@ -223,7 +223,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           console.log(`Actualizando ángulo de la polera a: ${spanishAngle}`);
           
           // Cargar la imagen de la polera para el nuevo ángulo
-          const colorName = color;
+          const colorName = "white"
           const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
           
           // Verificar si existe la imagen para este ángulo
@@ -335,7 +335,7 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
           console.log(`Actualizando ángulo de la polera al recargar a: ${spanishAngle}`);
           
           // Cargar la imagen de la polera para el nuevo ángulo
-          const colorName = color;
+          const colorName = "white";
           const newTshirtPath = `/assets/products/${colorName}-tshirt/${colorName}-tshirt-${spanishAngle}.png`;
           
           // Verificar si existe la imagen para este ángulo
