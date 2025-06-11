@@ -46,7 +46,7 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
   
 
     const getTshirtHexColor = useCallback((colorId: string): string => {
-      switch (colorId.toLocaleLowerCase()) {
+      switch (colorId.toLocaleLowerCase().replace(" ", "")) {
         case 'white': return '#FFFFFF';
         case 'black': return '#1A1A1A';
         case 'gray': return '#808080';
@@ -151,6 +151,7 @@ const CanvasModal: React.FC<CanvasModalProps> = ({ isOpen, onClose, item }) => {
     if (isCustomItem(item)) {
       const design = getDesignSafely(item);
       if (design?.color) {
+        console.log({COLOR: design.color})
         return getTshirtHexColor(design.color) ?? '#FFFFFF';
       }
     }
