@@ -4,15 +4,35 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Phone, MapPin, Home, Save, Edit, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Home, Save, Edit, AlertCircle, Globe, Map } from 'lucide-react';
 
+// Interfaz para los datos que vienen de MSAL
+interface MsalUserData {
+  id?: string;
+  oid?: string;
+  name?: string;
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  image?: string;
+}
+
+// Interfaz para los datos del perfil de usuario en nuestra aplicación
 interface UserProfileData {
-  id: string;
+  oid: string;
   name: string;
   email: string;
+  given_name: string;
+  family_name: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  country: string;
   phone?: string;
-  address?: string;
-  city?: string;
   postalCode?: string;
 }
 
@@ -26,15 +46,26 @@ export default function AccountPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [userData, setUserData] = useState<UserProfileData>({
-    id: '',
+    oid: '',
     name: '',
     email: '',
-    phone: '',
-    address: '',
+    given_name: '',
+    family_name: '',
+    streetAddress: '',
     city: '',
+    state: '',
+    country: '',
+    phone: '',
     postalCode: '',
   });
 
+  // Monitorear cambios en userData para debugging
+  useEffect(() => {
+    if (userData.oid) {
+      console.log('Estado actual del userData:', userData);
+    }
+  }, [userData]);
+  
   // Cargar datos del usuario
   useEffect(() => {
     if (status === 'loading') return;
@@ -47,45 +78,74 @@ export default function AccountPage() {
     // Si el usuario está autenticado, cargamos datos
     if (session?.user) {
       // Intentamos obtener datos del localStorage primero
-      try {
-        const storedUserData = localStorage.getItem('userData');
-        if (storedUserData) {
-          // Si hay datos guardados, los usamos
-          const parsedData = JSON.parse(storedUserData);
-          setUserData(parsedData);
-        } else {
-          // Si no hay datos guardados, usamos los de la sesión
-          setUserData({
-            id: session.user.id || '',
-            name: session.user.name || '',
-            email: session.user.email || '',
-            phone: '',
-            address: '',
-            city: '',
-            postalCode: '',
+
+          // Si no hay datos guardados, usamos los de la sesión y MSAL
+          // Accedemos de forma segura a los atributos MSAL con tipo correcto
+          const user = session.user as MsalUserData;
+          console.log({session})
+          
+          // Extraemos nombre y apellido del nombre completo si no vienen por separado
+          const nameParts = user.name ? user.name.split(' ') : ['', ''];
+          const firstName = user.given_name ?? nameParts[0] ?? '';
+          const lastName = user.family_name ?? nameParts.slice(1).join(' ') ?? '';
+          
+          // Accedemos a los datos de la sesión directamente desde las propiedades correctas
+          const newUserData: UserProfileData = {
+            oid: (user.id as string) ?? (session.profile?.oid as string) ?? '',              // Usamos el ID de usuario como identificador principal
+            name: user.name ?? '',                                 // Nombre completo
+            email: user.email ?? (session.profile && Array.isArray(session.profile.emails) ? session.profile.emails[0] : ''), // Email desde el array de emails si está disponible
+            given_name: user.given_name ?? firstName,              // Nombre
+            family_name: user.family_name ?? lastName,             // Apellido
+            streetAddress: (user.streetAddress as string) ?? (session.profile?.streetAddress as string) ?? '', // Dirección
+            city: (user.city as string) ?? (session.profile?.city as string) ?? '',         // Ciudad
+            state: (user.state as string) ?? (session.profile?.state as string) ?? '',      // Estado/Provincia
+            country: (user.country as string) ?? (session.profile?.country as string) ?? '', // País
+            phone: '',                                            // Teléfono (no viene en MSAL)
+            postalCode: '',                                       // Código postal (no viene en MSAL)
+          };
+          
+          // Debuggear los campos disponibles en la sesión para verificar
+          console.log('Datos de sesión disponibles:', user);
+          
+          setUserData(newUserData);
+          // Verificamos explícitamente que todos los campos estén disponibles
+          console.log('Datos a guardar en estado:', {
+            oid: newUserData.oid,
+            name: newUserData.name,
+            email: newUserData.email,
+            given_name: newUserData.given_name,
+            family_name: newUserData.family_name,
+            streetAddress: newUserData.streetAddress,
+            city: newUserData.city,
+            state: newUserData.state,
+            country: newUserData.country,
           });
+          console.log('Datos inicializados desde MSAL:', newUserData);
           
           // Y los guardamos en localStorage para futuras ediciones
-          localStorage.setItem('userData', JSON.stringify({
-            id: session.user.id || '',
-            name: session.user.name || '',
-            email: session.user.email || '',
-            phone: '',
-            address: '',
-            city: '',
-            postalCode: '',
-          }));
-        }
-      } catch (error) {
-        console.error('Error al cargar datos del usuario:', error);
-      }
+          // Esto simularía el guardado en BD la primera vez que el usuario inicia sesión
+          localStorage.setItem('userData', JSON.stringify(newUserData));
+          console.log('Datos guardados en localStorage por primera vez');
+
     }
   }, [session, status, router]);
 
+  // Manejar cambios en los campos del formulario
+  // Asegurándonos de que siempre actualicemos con string (nunca undefined)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setUserData({ ...userData, [name]: value });
+    setUserData(prev => ({
+      ...prev,
+      [name]: value || ''
+    }));
   };
+
+  useEffect(() => {
+    // Una vez que tenemos los datos, verificamos si hace falta actualizar algún campo
+    if (userData.oid && userData.email) {
+      console.log('Verificando datos en formulario:', userData);
+    }
+  }, [userData]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -104,7 +164,7 @@ export default function AccountPage() {
         text: 'Datos guardados correctamente' 
       });
       
-      // Limpiar mensaje después de 3 segundos
+      // Configuramos un timeout para limpiar el mensaje
       setTimeout(() => {
         setMessage({ type: '', text: '' });
       }, 3000);
@@ -129,9 +189,10 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className={`text-3xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-        Mi Cuenta
+    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center container mx-auto px-4 py-12">
+      <h1 className={`text-3xl font-bold mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+        <User className="w-8 h-8" />
+        Mi cuenta
       </h1>
 
       <div className={`rounded-lg shadow-md overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -166,7 +227,6 @@ export default function AccountPage() {
         )}
 
         <div className="p-6">
-          {/* Botón Editar/Cancelar */}
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setIsEditing(!isEditing)}
@@ -196,7 +256,55 @@ export default function AccountPage() {
                 type="text"
                 id="name"
                 name="name"
-                value={userData.name}
+                value={userData.name || ''}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-md border ${
+                  isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
+                  : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
+            
+            {/* Nombre (given_name) */}
+            <div className="space-y-2">
+              <label 
+                htmlFor="given_name" 
+                className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                <User className="inline-block mr-2 w-4 h-4" />
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="given_name"
+                name="given_name"
+                value={userData.given_name || ''}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-md border ${
+                  isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
+                  : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
+            
+            {/* Apellido (family_name) */}
+            <div className="space-y-2">
+              <label 
+                htmlFor="family_name" 
+                className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                <User className="inline-block mr-2 w-4 h-4" />
+                Apellido
+              </label>
+              <input
+                type="text"
+                id="family_name"
+                name="family_name"
+                value={userData.family_name || ''}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 rounded-md border ${
@@ -220,7 +328,7 @@ export default function AccountPage() {
                 type="email"
                 id="email"
                 name="email"
-                value={userData.email}
+                value={userData.email || ''}
                 onChange={handleChange}
                 disabled={true} // El email no se puede cambiar
                 className={`w-full px-4 py-2 rounded-md border ${
@@ -255,10 +363,10 @@ export default function AccountPage() {
               />
             </div>
 
-            {/* Dirección */}
+            {/* Dirección (streetAddress) */}
             <div className="space-y-2">
               <label 
-                htmlFor="address" 
+                htmlFor="streetAddress" 
                 className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 <MapPin className="inline-block mr-2 w-4 h-4" />
@@ -266,9 +374,9 @@ export default function AccountPage() {
               </label>
               <input
                 type="text"
-                id="address"
-                name="address"
-                value={userData.address || ''}
+                id="streetAddress"
+                name="streetAddress"
+                value={userData.streetAddress || ''}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 rounded-md border ${
@@ -293,6 +401,54 @@ export default function AccountPage() {
                 id="city"
                 name="city"
                 value={userData.city || ''}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-md border ${
+                  isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
+                  : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
+
+            {/* Estado/Provincia (state) */}
+            <div className="space-y-2">
+              <label 
+                htmlFor="state" 
+                className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                <Map className="inline-block mr-2 w-4 h-4" />
+                Estado/Provincia
+              </label>
+              <input
+                type="text"
+                id="state"
+                name="state"
+                value={userData.state || ''}
+                onChange={handleChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-md border ${
+                  isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
+                  : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+              />
+            </div>
+            
+            {/* País (country) */}
+            <div className="space-y-2">
+              <label 
+                htmlFor="country" 
+                className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                <Globe className="inline-block mr-2 w-4 h-4" />
+                País
+              </label>
+              <input
+                type="text"
+                id="country"
+                name="country"
+                value={userData.country || ''}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 rounded-md border ${

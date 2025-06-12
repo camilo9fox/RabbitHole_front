@@ -101,7 +101,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center container mx-auto px-4 py-12">
       <h1 className={`text-3xl font-bold mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
         <Settings className="w-8 h-8" />
         Configuración
