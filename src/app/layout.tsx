@@ -6,6 +6,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import Layout from "@/components/layouts/Layout";
 import { CartProvider } from "@/context/CartContext";
 import { UserRoleProvider } from "@/context/UserRoleContext";
+import { ProductDataProvider } from "@/context/ProductDataContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,9 +38,11 @@ export default function RootLayout({
           <ThemeProvider>
             <CartProvider>
               <UserRoleProvider>
-                <Layout>
-                  {children}
-                </Layout>
+                <ProductDataProvider>
+                  <Layout>
+                    {children}
+                  </Layout>
+                </ProductDataProvider>
               </UserRoleProvider>
             </CartProvider>
           </ThemeProvider>

@@ -18,6 +18,7 @@ import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThum
 import { AngleDesign } from '@/types/product';
 // Los tipos se usan en la función saveAdminProduct
 import { toast } from 'react-hot-toast';
+import { useProductData } from '@/context/ProductDataContext';
 
 // Interfaces
 interface ViewCustomization {
@@ -56,130 +57,16 @@ interface CustomizationOptions {
 // Eliminando duplicación
 
 // Opciones predefinidas
-const colorOptions = [
-  { 
+const predefinedColor = { 
     id: 'white', 
     label: 'Blanco', 
     value: '#FFFFFF', 
     textPreview: '#000000',
-    priceModifier: 0 // Sin costo adicional
-  },
-  { 
-    id: 'black', 
-    label: 'Negro', 
-    value: '#1A1A1A', 
-    textPreview: '#FFFFFF',
-    priceModifier: 0 // Sin costo adicional
-  },
-  { 
-    id: 'gray', 
-    label: 'Gris', 
-    value: '#808080', 
-    textPreview: '#FFFFFF',
-    priceModifier: 0 // Sin costo adicional
-  },
-  { 
-    id: 'blue', 
-    label: 'Azul', 
-    value: '#0047AB', 
-    textPreview: '#FFFFFF',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'navy', 
-    label: 'Azul Marino', 
-    value: '#000080', 
-    textPreview: '#FFFFFF',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'lightblue', 
-    label: 'Azul Claro', 
-    value: '#ADD8E6', 
-    textPreview: '#000000',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'red', 
-    label: 'Rojo', 
-    value: '#FF0000', 
-    textPreview: '#FFFFFF',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'burgundy', 
-    label: 'Borgoña', 
-    value: '#800020', 
-    textPreview: '#FFFFFF',
-    priceModifier: 700 // 700 pesos adicionales
-  },
-  { 
-    id: 'pink', 
-    label: 'Rosa', 
-    value: '#FFC0CB', 
-    textPreview: '#000000',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'green', 
-    label: 'Verde', 
-    value: '#008000', 
-    textPreview: '#FFFFFF',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'olive', 
-    label: 'Verde Oliva', 
-    value: '#808000', 
-    textPreview: '#FFFFFF',
-    priceModifier: 700 // 700 pesos adicionales
-  },
-  { 
-    id: 'mint', 
-    label: 'Menta', 
-    value: '#98FF98', 
-    textPreview: '#000000',
-    priceModifier: 700 // 700 pesos adicionales
-  },
-  { 
-    id: 'purple', 
-    label: 'Púrpura', 
-    value: '#800080', 
-    textPreview: '#FFFFFF',
-    priceModifier: 700 // 700 pesos adicionales
-  },
-  { 
-    id: 'yellow', 
-    label: 'Amarillo', 
-    value: '#FFFF00', 
-    textPreview: '#000000',
-    priceModifier: 500 // 500 pesos adicionales
-  },
-  { 
-    id: 'orange', 
-    label: 'Naranja', 
-    value: '#FFA500', 
-    textPreview: '#000000',
-    priceModifier: 500 // 500 pesos adicionales
+    priceModifier: 0 
   }
-];
 
-const sizeOptions = [
-  { id: 'xs', label: 'XS', priceModifier: -1000 }, // 1000 pesos menos
-  { id: 's', label: 'S', priceModifier: -500 }, // 500 pesos menos
-  { id: 'm', label: 'M', priceModifier: 0 }, // Precio base
-  { id: 'l', label: 'L', priceModifier: 500 }, // 500 pesos más
-  { id: 'xl', label: 'XL', priceModifier: 1000 }, // 1000 pesos más
-  { id: 'xxl', label: 'XXL', priceModifier: 1500 } // 1500 pesos más
-];
 
-const fontOptions = [
-  { id: 'arial', label: 'Arial', value: 'Arial' },
-  { id: 'times', label: 'Times New Roman', value: 'Times New Roman' },
-  { id: 'courier', label: 'Courier New', value: 'Courier New' },
-  { id: 'georgia', label: 'Georgia', value: 'Georgia' },
-  { id: 'verdana', label: 'Verdana', value: 'Verdana' }
-];
+const predefinedSize = { id: 'm', label: 'M', priceModifier: 0 } 
 
 const textColorOptions = [
   { id: 'black', label: 'Negro', value: '#000000' },
@@ -204,8 +91,15 @@ const CustomizeHTML = () => {
   const { isAdmin } = useUserRole();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { colors, sizes, fonts } = useProductData();
   const productId = searchParams.get('productId');
   
+  useEffect(() => {
+    console.log({colors})
+    console.log({sizes})
+    console.log({fonts})
+  }, [colors, sizes, fonts])
+
   const isDarkMode = resolvedTheme === 'dark';
   
   // Referencias para animaciones
@@ -296,9 +190,9 @@ const CustomizeHTML = () => {
   const currentViewData = formValues[currentView];
   
   // Opciones seleccionadas
-  const selectedColorOption = colorOptions.find(option => option.id === formValues.color) ?? colorOptions[0];
+  const selectedColorOption = colors.find(option => option.id === formValues.color) ?? predefinedColor;
   const selectedFont = currentViewData.textFont || 'Arial';
-  const selectedSizeOption = sizeOptions.find(option => option.id === formValues.size) ?? sizeOptions[2]; // Default a M
+  const selectedSizeOption = sizes.find(option => option.id === formValues.size) ?? predefinedSize; // Default a M
   
   // Calcular precio total
   const calculateTotalPrice = () => {
@@ -1153,7 +1047,7 @@ const CustomizeHTML = () => {
                     Color de la Polera
                   </Text>
                   <div className="flex flex-wrap gap-2">
-                    {colorOptions.map((option) => (
+                    {colors.map((option) => (
                       <button
                         key={option.id}
                         type="button"
@@ -1176,7 +1070,7 @@ const CustomizeHTML = () => {
                     Talla
                   </Text>
                   <div className="flex flex-wrap gap-2">
-                    {sizeOptions.map((option) => (
+                    {sizes.map((option) => (
                       <button
                         key={option.id}
                         type="button"
@@ -1219,12 +1113,12 @@ const CustomizeHTML = () => {
                     Fuente del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
                   </Text>
                   <div className="flex flex-wrap gap-2">
-                    {fontOptions.map((option) => (
+                    {fonts.map((option) => (
                       <button
                         key={option.id}
                         type="button"
                         className={getFontButtonClass(currentViewData.textFont === option.value)}
-                        onClick={() => setValue(`${currentView}.textFont`, option.value)}
+                        onClick={() => setValue(`${currentView}.textFont`, option.id)}
                         disabled={!!currentViewData.image || !currentViewData.text}
                       >
                         {option.label}
