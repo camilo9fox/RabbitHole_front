@@ -1,13 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { fetchColors, fetchSizes, fetchFonts } from '@/services';
-import { ColorOption, SizeOption, FontOption } from '@/types/productData';
+import { fetchColors, fetchSizes, fetchFonts, fetchCategories } from '@/services';
+import { ColorOption, SizeOption, FontOption, ProductCategoryDTO } from '@/types/productData';
 
 interface ProductDataContextType {
   colors: ColorOption[];
   sizes: SizeOption[];
   fonts: FontOption[];
+  categories: ProductCategoryDTO[];
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>; // Función para refrescar los datos manualmente
@@ -19,6 +20,7 @@ export const ProductDataProvider: React.FC<{children: React.ReactNode}> = ({ chi
   const [colors, setColors] = useState<ColorOption[]>([]);
   const [sizes, setSizes] = useState<SizeOption[]>([]);
   const [fonts, setFonts] = useState<FontOption[]>([]);
+  const [categories, setCategories] = useState<ProductCategoryDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,16 +31,18 @@ export const ProductDataProvider: React.FC<{children: React.ReactNode}> = ({ chi
       setError(null);
       
       //Obtener datos usando los servicios
-      const [colorsData, sizesData, fontsData] = await Promise.all([
+      const [colorsData, sizesData, fontsData, categoriesData] = await Promise.all([
         fetchColors(),
         fetchSizes(),
-        fetchFonts()
+        fetchFonts(),
+        fetchCategories()
       ]);
 
 
       setColors(colorsData);
       setSizes(sizesData);
       setFonts(fontsData);
+      setCategories(categoriesData);
     } catch (err: unknown) {
       console.error('Error fetching product data:', err);
       setError((err as Error).message ?? 'Error al cargar datos de productos');
@@ -47,6 +51,7 @@ export const ProductDataProvider: React.FC<{children: React.ReactNode}> = ({ chi
       setColors(getDefaultColors());
       setSizes(getDefaultSizes());
       setFonts(getDefaultFonts());
+      setCategories(getDefaultCategories());
     } finally {
       setIsLoading(false);
     }
@@ -67,10 +72,11 @@ export const ProductDataProvider: React.FC<{children: React.ReactNode}> = ({ chi
     colors,
     sizes,
     fonts,
+    categories,
     isLoading,
     error,
     refreshData
-  }), [colors, sizes, fonts, isLoading, error, refreshData]);
+  }), [colors, sizes, fonts, categories, isLoading, error, refreshData]);
 
   return (
     <ProductDataContext.Provider value={contextValue}>
@@ -131,3 +137,11 @@ function getDefaultFonts(): FontOption[] {
     { id: 'opensans', label: 'Open Sans', value: 'Open Sans' }
   ];
 }
+
+function getDefaultCategories(): ProductCategoryDTO[] {
+  return [
+    { id: '1', nombre: 'Minimalista', descripcion: 'Poleras' },
+    { id: '2', nombre: 'Moderno', descripcion: 'Poleras' },
+    { id: '3', nombre: 'Retro', descripcion: 'Poleras' },
+  ];
+} 

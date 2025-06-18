@@ -1,4 +1,4 @@
-import { ColorOption, SizeOption, FontOption, ApiColorDTO, ApiSizeDTO, ApiFontDTO } from '@/types/productData';
+import { ColorOption, SizeOption, FontOption, ApiColorDTO, ApiSizeDTO, ApiFontDTO, ProductCategoryDTO } from '@/types/productData';
 
 import { API_ROUTES } from '@/config/apiRoutes';
 import axios from "axios";
@@ -70,6 +70,16 @@ export const fetchFonts = async (): Promise<FontOption[]> => {
     throw error;
   }
 };
+
+export const fetchCategories = async (): Promise<ProductCategoryDTO[]> => {
+    try {
+        const response = await axios.get(API_ROUTES.categories);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener categorías:', error);
+        throw error;
+    }
+}
 
 export const fetchProducts = async () => {
     try {

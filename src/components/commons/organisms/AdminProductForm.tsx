@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import Text from '@/components/commons/atoms/Text';
 // No necesitamos Image por ahora
 import { useFormContext } from 'react-hook-form';
+import { useProductData } from '@/context/ProductDataContext';
 
 interface AdminProductFieldsProps {
   productId?: string;
@@ -15,6 +16,7 @@ const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   const isEditing = !!productId;
+  const { categories } = useProductData();
   
   // Usamos useFormContext para acceder al formulario principal
   const { register, formState: { errors } } = useFormContext();
@@ -63,13 +65,17 @@ const AdminProductForm: React.FC<AdminProductFieldsProps> = ({ productId }) => {
         <label htmlFor="admin-category">
           <Text variant="body" className={`mb-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Categoría</Text>
         </label>
-        <input
+        <select
           id="admin-category"
-          type="text"
           className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'}`}
-          placeholder="Categoría del producto (ej: Urbano, Minimalista, etc.)"
           {...register('admin.category', { required: 'La categoría es obligatoria' })}
-        />
+        >
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.nombre}
+            </option>
+          ))}
+        </select>
         {errors.admin && 'category' in errors.admin && (
           <Text variant="small" className="text-red-500 mt-1">
             La categoría es obligatoria
