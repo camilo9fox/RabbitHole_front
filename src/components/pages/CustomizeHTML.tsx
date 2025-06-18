@@ -470,77 +470,123 @@ const CustomizeHTML = () => {
         return canvas;
       };
       
-      // Esperar a que se actualice la vista
-      setTimeout(async () => {
-        // Obtener el canvas de la vista actual
-        let thumbnailCanvas: HTMLCanvasElement | null = null;
-        let frontCanvas: HTMLCanvasElement | null = null;
-        let backCanvas: HTMLCanvasElement | null = null;
-        let leftCanvas: HTMLCanvasElement | null = null;
-        let rightCanvas: HTMLCanvasElement | null = null;
+      // Esperamos a que se actualice la vista inicial antes de comenzar
+      setTimeout(() => {
+        // Función para procesar las vistas secuencialmente
+        const processViews = async () => {
+          let thumbnailCanvas: HTMLCanvasElement | null = null;
+          let frontCanvas: HTMLCanvasElement | null = null;
+          let backCanvas: HTMLCanvasElement | null = null;
+          let leftCanvas: HTMLCanvasElement | null = null;
+          let rightCanvas: HTMLCanvasElement | null = null;
+          
+          // Función auxiliar para cambiar la vista y esperar a que se renderice
+          const switchToViewAndWait = async (view: 'front' | 'back' | 'left' | 'right'): Promise<void> => {
+            console.log(`Cambiando a vista: ${view}`);
+            setValue('view', view);
+            // Esperamos más tiempo para asegurar que el canvas se renderice completamente
+            return new Promise(resolve => setTimeout(resolve, 500)); 
+          };
+
+          try {
+            const originalView = formValues.view;
+            console.log('Vista original:', originalView);
+            
+            // Procesar vista frontal si tiene personalización
+            if (frontHasCustomization) {
+              await switchToViewAndWait('front');
+              console.log('Generando thumbnail para Front');
+              frontCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
+              console.log('¿Se obtuvo el canvas de Front?', !!frontCanvas);
+              if(frontCanvas) {
+                const thumbnailUrlFront = generateThumbnail(frontCanvas);
+                setValue('front.thumbnail', thumbnailUrlFront);
+                console.log('Thumbnail de Front guardado correctamente');
+              }
+            }
+            
+            // Procesar vista trasera si tiene personalización
+            if (backHasCustomization) {
+              await switchToViewAndWait('back');
+              console.log('Generando thumbnail para Back');
+              console.log('¿Existe backCanvasRef?', !!backCanvasRef.current);
+              backCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
+              console.log('¿Se obtuvo el canvas de Back?', !!backCanvas);
+              if(backCanvas) {
+                const thumbnailUrlBack = generateThumbnail(backCanvas);
+                setValue('back.thumbnail', thumbnailUrlBack);
+                console.log('Thumbnail de Back guardado correctamente');
+              } else {
+                console.error('No se pudo obtener el canvas para la vista Back');
+              }
+            }
+            
+            // Procesar vista izquierda si tiene personalización
+            if (leftHasCustomization) {
+              await switchToViewAndWait('left');
+              console.log('Generando thumbnail para Left');
+              leftCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
+              console.log('¿Se obtuvo el canvas de Left?', !!leftCanvas);
+              if(leftCanvas) {
+                const thumbnailUrlLeft = generateThumbnail(leftCanvas);
+                setValue('left.thumbnail', thumbnailUrlLeft);
+                console.log('Thumbnail de Left guardado correctamente');
+              }
+            }
+            
+            // Procesar vista derecha si tiene personalización
+            if (rightHasCustomization) {
+              await switchToViewAndWait('right');
+              console.log('Generando thumbnail para Right');
+              rightCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
+              console.log('¿Se obtuvo el canvas de Right?', !!rightCanvas);
+              if(rightCanvas) {
+                const thumbnailUrlRight = generateThumbnail(rightCanvas);
+                setValue('right.thumbnail', thumbnailUrlRight);
+                console.log('Thumbnail de Right guardado correctamente');
+              }
+            }
+            
+            // Volver a la vista que se usará como thumbnail principal
+            console.log(`Volviendo a la vista principal: ${viewToShow}`);
+            await switchToViewAndWait(viewToShow);
+
+            // Seleccionar el canvas principal según la vista a mostrar
+            switch (viewToShow) {
+              case 'front':
+                thumbnailCanvas = frontCanvas;
+                break;
+              case 'back':
+                thumbnailCanvas = backCanvas;
+                break;
+              case 'left':
+                thumbnailCanvas = leftCanvas;
+                break;
+              case 'right':
+                thumbnailCanvas = rightCanvas;
+                break;
+            }
+            
+            if (!thumbnailCanvas) {
+              toast.error(`Error al generar la miniatura: No se encontró el canvas para la vista ${viewToShow}`);
+              return;
+            }
+            
+            // Generar thumbnail para la imagen principal
+            const thumbnailUrl = generateThumbnail(thumbnailCanvas);
+            console.log('Thumbnail generado desde la vista:', viewToShow);
+            
+            // Finalizar el guardado del producto con el thumbnail generado
+            finishProductSave(thumbnailUrl, currentViewValue);
+            
+          } catch (error) {
+            console.error('Error al generar el thumbnail:', error);
+            toast.error('Ocurrió un error al generar la miniatura del producto');
+          }
+        };
         
-        try {
-
-          if (frontHasCustomization) {
-            frontCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
-            if(frontCanvas){
-              const thumbnailUrlFront = generateThumbnail(frontCanvas)
-              setValue('front.thumbnail', thumbnailUrlFront)
-            }
-          }
-          if (backHasCustomization) {
-            backCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
-            if(backCanvas){
-              const thumbnailUrlBack = generateThumbnail(backCanvas)
-              setValue('back.thumbnail', thumbnailUrlBack)
-            }
-          }
-          if (leftHasCustomization) {
-            leftCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
-            if(leftCanvas){
-              const thumbnailUrlLeft = generateThumbnail(leftCanvas)
-              setValue('left.thumbnail', thumbnailUrlLeft)
-            }
-          }
-         if (rightHasCustomization) {
-            rightCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
-            if(rightCanvas){
-              const thumbnailUrlRight = generateThumbnail(rightCanvas)
-              setValue('right.thumbnail', thumbnailUrlRight)
-            }
-          }
-
-          switch (viewToShow) {
-            case 'front':
-              thumbnailCanvas = frontCanvas;
-              break;
-            case 'back':
-              thumbnailCanvas = backCanvas;
-              break;
-            case 'left':
-              thumbnailCanvas = leftCanvas;
-              break;
-            case 'right':
-              thumbnailCanvas = rightCanvas;
-              break;
-          }
-          
-          if (!thumbnailCanvas) {
-            toast.error(`Error al generar la miniatura: No se encontró el canvas para la vista ${viewToShow}`);
-            return;
-          }
-          
-          // Generar thumbnail
-          const thumbnailUrl = generateThumbnail(thumbnailCanvas);
-          console.log('Thumbnail generado desde la vista:', viewToShow);
-          
-          // Finalizar el guardado del producto con el thumbnail generado
-          finishProductSave(thumbnailUrl, currentViewValue);
-          
-        } catch (error) {
-          console.error('Error al generar el thumbnail:', error);
-          toast.error('Ocurrió un error al generar la miniatura del producto');
-        }
+        // Llamar a la función para procesar todas las vistas
+        processViews();
       }, 200);
     } else {
       // Lógica para agregar al carrito (usuarios normales)
