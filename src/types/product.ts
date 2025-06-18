@@ -27,6 +27,7 @@ export interface DesignText {
 
 // Representa el diseño para un ángulo específico de la polera
 export interface AngleDesign {
+  thumbnail?: string;
   image?: DesignImage;  // Imagen de diseño (opcional)
   text?: DesignText;    // Texto de diseño (opcional)
 }

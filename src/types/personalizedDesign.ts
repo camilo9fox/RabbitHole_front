@@ -9,8 +9,8 @@ export interface DisenoPersonalizadoDTO {
     estadoId: number
     creadoPorAdmin: boolean
     angulos: AnguloDTO[]
-    creadoEn: number[]
-    actualizadoEn: number[]
+    creadoEn?: number[]
+    actualizadoEn?: number[]
   }
   
 export interface AnguloDTO {

@@ -15,6 +15,11 @@ import { useUserRole } from '@/context/UserRoleContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminProductForm from '@/components/commons/organisms/AdminProductForm';
 import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail } from '@/services/adminProductService';
+import { createProduct, updateProduct } from '@/services/productDataService';
+import { createPersonalizedDesign, updatePersonalizedDesign } from '@/services/diseñoPersonalizadoService';
+import { ProductDTO } from '@/types/productData';
+import { DisenoPersonalizadoDTO } from '@/types/personalizedDesign';
+import { convertAngleDesignToDTO } from '@/utils/designConverter';
 import { AngleDesign } from '@/types/product';
 // Los tipos se usan en la función saveAdminProduct
 import { toast } from 'react-hot-toast';
@@ -23,6 +28,7 @@ import { useProductData } from '@/context/ProductDataContext';
 // Interfaces
 interface ViewCustomization {
   text: string;
+  thumbnail: string;
   image: string | null;
   textFont: string;
   textColor: string;
@@ -69,12 +75,12 @@ const predefinedColor = {
 const predefinedSize = { id: 'm', label: 'M', priceModifier: 0 } 
 
 const textColorOptions = [
-  { id: 'black', label: 'Negro', value: '#000000' },
-  { id: 'white', label: 'Blanco', value: '#FFFFFF' },
-  { id: 'red', label: 'Rojo', value: '#FF0000' },
-  { id: 'blue', label: 'Azul', value: '#0000FF' },
-  { id: 'green', label: 'Verde', value: '#008000' },
-  { id: 'yellow', label: 'Amarillo', value: '#FFFF00' }
+  'black', 
+  'white',
+  'red',
+  'blue', 
+  'green', 
+  'yellow'
 ];
 
 // Vistas de la polera
@@ -128,6 +134,7 @@ const CustomizeHTML = () => {
       view: 'front',
       // Valores predeterminados para cada vista
       front: {
+        thumbnail: '',
         text: '',
         image: null,
         textFont: 'Arial',
@@ -141,6 +148,7 @@ const CustomizeHTML = () => {
         imageHeight: 150
       },
       back: {
+        thumbnail: '',
         text: '',
         image: null,
         textFont: 'Arial',
@@ -154,6 +162,7 @@ const CustomizeHTML = () => {
         imageHeight: 150
       },
       left: {
+        thumbnail: '',
         text: '',
         image: null,
         textFont: 'Arial',
@@ -167,6 +176,7 @@ const CustomizeHTML = () => {
         imageHeight: 150
       },
       right: {
+        thumbnail: '',
         text: '',
         image: null,
         textFont: 'Arial',
@@ -342,14 +352,16 @@ const CustomizeHTML = () => {
   // Función para crear un objeto AngleDesign a partir de los datos del formulario
   const getAngleDesign = (view: 'front' | 'back' | 'left' | 'right'): AngleDesign => {
     const viewData = formValues[view];
-    const design: AngleDesign = {};
+    const design: AngleDesign = {
+      thumbnail: viewData.thumbnail
+    };
     
     // Añadir texto si existe
     if (viewData.text) {
       design.text = {
         content: viewData.text,
-        font: viewData.textFont ?? 'Arial',
-        color: viewData.textColor ?? '#000000',
+        font: fonts.find(f => f.value === viewData.textFont)!.id,
+        color: viewData.textColor ?? 'white',
         size: viewData.textSize ?? 30,
         position: {
           x: viewData.textPositionX ?? 250,
@@ -462,20 +474,54 @@ const CustomizeHTML = () => {
       setTimeout(async () => {
         // Obtener el canvas de la vista actual
         let thumbnailCanvas: HTMLCanvasElement | null = null;
+        let frontCanvas: HTMLCanvasElement | null = null;
+        let backCanvas: HTMLCanvasElement | null = null;
+        let leftCanvas: HTMLCanvasElement | null = null;
+        let rightCanvas: HTMLCanvasElement | null = null;
         
         try {
+
+          if (frontHasCustomization) {
+            frontCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
+            if(frontCanvas){
+              const thumbnailUrlFront = generateThumbnail(frontCanvas)
+              setValue('front.thumbnail', thumbnailUrlFront)
+            }
+          }
+          if (backHasCustomization) {
+            backCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
+            if(backCanvas){
+              const thumbnailUrlBack = generateThumbnail(backCanvas)
+              setValue('back.thumbnail', thumbnailUrlBack)
+            }
+          }
+          if (leftHasCustomization) {
+            leftCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
+            if(leftCanvas){
+              const thumbnailUrlLeft = generateThumbnail(leftCanvas)
+              setValue('left.thumbnail', thumbnailUrlLeft)
+            }
+          }
+         if (rightHasCustomization) {
+            rightCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
+            if(rightCanvas){
+              const thumbnailUrlRight = generateThumbnail(rightCanvas)
+              setValue('right.thumbnail', thumbnailUrlRight)
+            }
+          }
+
           switch (viewToShow) {
             case 'front':
-              thumbnailCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
+              thumbnailCanvas = frontCanvas;
               break;
             case 'back':
-              thumbnailCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
+              thumbnailCanvas = backCanvas;
               break;
             case 'left':
-              thumbnailCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
+              thumbnailCanvas = leftCanvas;
               break;
             case 'right':
-              thumbnailCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
+              thumbnailCanvas = rightCanvas;
               break;
           }
           
@@ -503,47 +549,147 @@ const CustomizeHTML = () => {
   };
   
   // Función para finalizar el guardado del producto con el thumbnail generado
-  const finishProductSave = (thumbnailUrl: string, originalView: TshirtView) => {
+  const finishProductSave = async (thumbnailUrl: string, originalView: TshirtView) => {
     setValue('view', originalView);
     const formData = methods.getValues();
     if (!formData.admin) {
       toast.error('Error: Faltan los campos de administrador');
       return;
     }
-    const productData = {
-      name: formData.admin.name,
-      description: formData.admin.description,
-      category: formData.admin.category,
-      price: totalPrice,
-      color: selectedColorOption.value,
-      size: selectedSizeOption.id,
-      thumbnail: thumbnailUrl,
-      selectedColor: selectedColorOption.id,
-      angles: {
-        front: getAngleDesign('front'),
-        back: getAngleDesign('back'),
-        left: getAngleDesign('left'),
-        right: getAngleDesign('right')
-      },
-      baseColor: formData.color
-    };
+    
     try {
-      if (productId) {
-        const existingProduct = getAdminProductById(productId);
-        if (!existingProduct) {
-          toast.error('No se encontró el producto a actualizar');
-          return;
+      // Mostrar notificación de procesamiento
+      toast.loading('Guardando producto...');
+      
+      // 1. Preparar datos para la API
+      const productDTO: ProductDTO = {
+        id: productId ? parseInt(productId) : undefined,
+        nombre: formData.admin.name,
+        descripcion: formData.admin.description,
+        categoria: {
+          id: parseInt(formData.admin.category) // Asumiendo que category es el ID como string
+        },
+        activo: true,
+        disenoPersonalizado: {
+          id: 1 // ID del diseño personalizado
         }
-        const updatedProduct = { ...existingProduct, ...productData, id: productId };
-        updateAdminProduct(updatedProduct);
+      };
+      
+      // 2. Preparar datos del diseño personalizado
+      const angulosDTO = [
+        // Crear ángulos solo para vistas que tienen customización
+        hasCustomizationInView('front') ? convertAngleDesignToDTO(getAngleDesign('front'), 'front') : null,
+        hasCustomizationInView('back') ? convertAngleDesignToDTO(getAngleDesign('back'), 'back') : null,
+        hasCustomizationInView('left') ? convertAngleDesignToDTO(getAngleDesign('left'), 'left') : null,
+        hasCustomizationInView('right') ? convertAngleDesignToDTO(getAngleDesign('right'), 'right') : null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ].filter(Boolean) as any[]; // Eliminar los nulls
+      
+      const disenoPersonalizadoDTO: DisenoPersonalizadoDTO = {
+        usuarioId: 1, // ID del administrador (asumimos 1 como admin)
+        detalle: formData.details,
+        colorId: selectedColorOption.id,
+        tallaId: selectedSizeOption.id,
+        precio: totalPrice,
+        estadoId: 1, // Activo
+        creadoPorAdmin: true,
+        angulos: angulosDTO,
+      };
+      
+      // 3. Crear o actualizar producto y diseño personalizado
+      if (productId) {
+        // Actualizar producto existente
+        productDTO.id = Number(productId);
+        const updatedProduct = await updateProduct(productDTO);
+        console.log('Producto actualizado:', updatedProduct);
+        
+        // También actualizamos en localStorage para mantener compatibilidad
+        const existingProduct = getAdminProductById(productId);
+        if (existingProduct) {
+          const localProductData = {
+            name: formData.admin.name,
+            description: formData.admin.description,
+            category: formData.admin.category,
+            price: totalPrice,
+            color: selectedColorOption.value,
+            size: selectedSizeOption.id,
+            thumbnail: thumbnailUrl,
+            selectedColor: selectedColorOption.id,
+            angles: {
+              front: getAngleDesign('front'),
+              back: getAngleDesign('back'),
+              left: getAngleDesign('left'),
+              right: getAngleDesign('right')
+            },
+            baseColor: formData.color
+          };
+          const updatedLocalProduct = { ...existingProduct, ...localProductData, id: productId };
+          updateAdminProduct(updatedLocalProduct);
+        }
+        
+        // Actualizar el diseño personalizado asociado si existe
+        if (updatedProduct.disenoPersonalizado?.id) {
+          await updatePersonalizedDesign({
+            ...disenoPersonalizadoDTO,
+            id: updatedProduct.disenoPersonalizado.id
+          });
+        } else {
+          // Si no existe, creamos uno nuevo y lo asociamos
+          const newDiseno = await createPersonalizedDesign(disenoPersonalizadoDTO);
+          // Aquí deberíamos actualizar el producto con el ID del diseño nuevo
+          if (newDiseno && newDiseno.id) {
+            productDTO.disenoPersonalizado.id = newDiseno.id;
+            await updateProduct(
+              productDTO
+            );
+          }
+        }
+        
         toast.success('Producto actualizado correctamente');
       } else {
-        saveAdminProduct(productData);
+        // Crear nuevo producto
+        // Primero creamos el diseño personalizado
+        const newDiseno = await createPersonalizedDesign(disenoPersonalizadoDTO);
+        
+        // Luego creamos el producto asociado
+        if (newDiseno && newDiseno.id) {
+          productDTO.disenoPersonalizado = {
+            id: newDiseno.id
+          };
+          const newProduct = await createProduct(productDTO);
+          console.log('Nuevo producto creado:', newProduct);
+          
+          // También guardamos en localStorage para mantener compatibilidad
+          const localProductData = {
+            name: formData.admin.name,
+            description: formData.admin.description,
+            category: formData.admin.category,
+            price: totalPrice,
+            color: selectedColorOption.value,
+            size: selectedSizeOption.id,
+            thumbnail: thumbnailUrl,
+            selectedColor: selectedColorOption.id,
+            angles: {
+              front: getAngleDesign('front'),
+              back: getAngleDesign('back'),
+              left: getAngleDesign('left'),
+              right: getAngleDesign('right')
+            },
+            baseColor: formData.color,
+            id: newProduct.id.toString() // Usamos el ID de la API
+          };
+          saveAdminProduct(localProductData);
+        } else {
+          throw new Error('Error al crear el diseño personalizado');
+        }
+        
         toast.success('Producto creado correctamente');
       }
+      
+      // Redireccionar después de guardar
       setTimeout(() => {
         router.push('/admin/products');
-      }, 500); // Pequeño retraso para asegurar que se complete el guardado
+      }, 1000); // Pequeño retraso para que el usuario vea el mensaje de éxito
     } catch (error: unknown) {
       console.error('Error al guardar producto:', error);
       toast.error(productId ? 'Error al actualizar el producto' : 'Error al crear el producto');
@@ -785,6 +931,7 @@ const CustomizeHTML = () => {
         // Cargar diseños de cada ángulo si existen
         if (loadedProduct.angles?.front) {
           setValue('front', {
+            thumbnail: loadedProduct.angles.front.thumbnail ?? '',
             text: loadedProduct.angles.front.text?.content ?? '',
             image: loadedProduct.angles.front.image?.src ?? null,
             textFont: loadedProduct.angles.front.text?.font ?? 'Arial',
@@ -801,6 +948,7 @@ const CustomizeHTML = () => {
         
         if (loadedProduct.angles?.back) {
           setValue('back', {
+            thumbnail: loadedProduct.angles.back.thumbnail ?? '',
             text: loadedProduct.angles.back.text?.content ?? '',
             image: loadedProduct.angles.back.image?.src ?? null,
             textFont: loadedProduct.angles.back.text?.font ?? 'Arial',
@@ -817,6 +965,7 @@ const CustomizeHTML = () => {
         
         if (loadedProduct.angles?.left) {
           setValue('left', {
+            thumbnail: loadedProduct.angles.left.thumbnail ?? '',
             text: loadedProduct.angles.left.text?.content ?? '',
             image: loadedProduct.angles.left.image?.src ?? null,
             textFont: loadedProduct.angles.left.text?.font ?? 'Arial',
@@ -833,6 +982,7 @@ const CustomizeHTML = () => {
         
         if (loadedProduct.angles?.right) {
           setValue('right', {
+            thumbnail: loadedProduct.angles.right.thumbnail ?? '',
             text: loadedProduct.angles.right.text?.content ?? '',
             image: loadedProduct.angles.right.image?.src ?? null,
             textFont: loadedProduct.angles.right.text?.font ?? 'Arial',
@@ -1118,7 +1268,7 @@ const CustomizeHTML = () => {
                         key={option.id}
                         type="button"
                         className={getFontButtonClass(currentViewData.textFont === option.value)}
-                        onClick={() => setValue(`${currentView}.textFont`, option.id)}
+                        onClick={() => setValue(`${currentView}.textFont`, option.value)}
                         disabled={!!currentViewData.image || !currentViewData.text}
                       >
                         {option.label}
@@ -1133,16 +1283,16 @@ const CustomizeHTML = () => {
                     Color del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
                   </Text>
                   <div className="flex flex-wrap gap-2">
-                    {textColorOptions.map((option) => (
+                    {colors.filter(color => textColorOptions.includes(color.id)).map((color) => (
                       <button
-                        key={option.id}
+                        key={color.id}
                         type="button"
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
-                        style={{ backgroundColor: option.value }}
-                        onClick={() => setValue(`${currentView}.textColor`, option.value)}
+                        style={{ backgroundColor: color.value }}
+                        onClick={() => setValue(`${currentView}.textColor`, color.id)}
                         disabled={!!currentViewData.image || !currentViewData.text}
                       >
-                        {currentViewData.textColor === option.value && (
+                        {currentViewData.textColor === color.id && (
                           <span className="text-white text-xs">✓</span>
                         )}
                       </button>
