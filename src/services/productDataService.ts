@@ -1,23 +1,20 @@
 import { ColorOption, SizeOption, FontOption, ApiColorDTO, ApiSizeDTO, ApiFontDTO } from '@/types/productData';
 
-// Configuración de la API
-const API_BASE_URL = 'http://localhost:8080/api';
+import { API_ROUTES } from '@/config/apiRoutes';
+import axios from "axios";
+import { ProductDTO } from "@/types/productData";
 
 /**
  * Obtiene los colores disponibles desde el backend
  */
 export const fetchColors = async (): Promise<ColorOption[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/colores`);
+    const response = await axios.get(API_ROUTES.colors);
     
-    if (!response.ok) {
-      throw new Error(`Error al cargar colores: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json() as ApiColorDTO[];
+    const data = response.data;
     
     // Mapear datos del backend al formato esperado en el frontend
-    return data.map((color) => ({
+    return data.map((color: ApiColorDTO) => ({
       id: color.id,
       label: color.nombre,
       value: color.codigoHex,
@@ -35,16 +32,14 @@ export const fetchColors = async (): Promise<ColorOption[]> => {
  */
 export const fetchSizes = async (): Promise<SizeOption[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/tallas`);
+    const response = await axios.get(API_ROUTES.sizes);
     
-    if (!response.ok) {
-      throw new Error(`Error al cargar tallas: ${response.status} ${response.statusText}`);
-    }
+    const data = response.data;
     
-    const data = await response.json() as ApiSizeDTO[];
+    
     
     // Mapear datos del backend al formato esperado en el frontend
-    return data.map((size) => ({
+    return data.map((size: ApiSizeDTO) => ({
       id: size.id,
       label: size.nombre,
       priceModifier: size.modificadorPrecio ?? 0
@@ -60,16 +55,12 @@ export const fetchSizes = async (): Promise<SizeOption[]> => {
  */
 export const fetchFonts = async (): Promise<FontOption[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/fuentes`);
+    const response = await axios.get(API_ROUTES.fonts);
     
-    if (!response.ok) {
-      throw new Error(`Error al cargar fuentes: ${response.status} ${response.statusText}`);
-    }
+    const data = response.data;
     
-    const data = await response.json() as ApiFontDTO[];
-    
-    // Mapear datos del backend al formato esperado en el frontend
-    return data.map((font) => ({
+    // Mapear dat os del backend al formato esperado en el frontend
+    return data.map((font: ApiFontDTO) => ({
       id: font.id,
       label: font.nombre,
       value: font.nombreFamilia ?? font.nombre // Usar nombreFamilia si existe, o nombre como fallback
@@ -79,6 +70,47 @@ export const fetchFonts = async (): Promise<FontOption[]> => {
     throw error;
   }
 };
+
+export const fetchProducts = async () => {
+    try {
+        const response = await axios.get(API_ROUTES.products);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener productos:', error);
+        throw error;
+    }
+}
+
+export const createProduct = async (product: ProductDTO) => {
+    try {
+        const response = await axios.post(API_ROUTES.products, product);
+        return response.data;
+    } catch (error) {
+        console.error('Error al crear producto:', error);
+        throw error;
+    }
+}
+
+export const updateProduct = async (product: ProductDTO) => {
+    try {
+        const response = await axios.put(`${API_ROUTES.products}/${product.id}`, product);
+        return response.data;
+    } catch (error) {
+        console.error('Error al actualizar producto:', error);
+        throw error;
+    }
+}
+
+export const deleteProduct = async (id: number) => {
+    try {
+        const response = await axios.delete(`${API_ROUTES.products}/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al eliminar producto:', error);
+        throw error;
+    }
+}
+    
 
 /**
  * Determina el color de contraste óptimo para texto sobre un fondo de color

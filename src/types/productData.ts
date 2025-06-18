@@ -19,6 +19,28 @@ export interface FontOption {
   value: string; // Nombre de la familia tipográfica
 }
 
+export interface ProductCategoryDTO {
+    id: string;
+    nombre: string;
+    descripcion: string;
+}
+
+export interface ProductDTO {
+  id?: number
+  nombre: string
+  descripcion: string
+  categoria: ObjectID
+  activo: boolean
+  creadoEn: string
+  actualizadoEn: string
+  disenoPersonalizado: ObjectID
+}
+
+export interface ObjectID {
+  id: number
+}
+
+
 // Interfaces para datos de la API
 export interface ApiColorDTO {
   id: string;
