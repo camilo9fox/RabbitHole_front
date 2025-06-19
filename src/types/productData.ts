@@ -1,3 +1,5 @@
+import { DisenoPersonalizadoDTO } from "./personalizedDesign";
+
 // Interfaces compartidas para datos de productos
 export interface ColorOption {
   id: string;
@@ -25,15 +27,27 @@ export interface ProductCategoryDTO {
     descripcion: string;
 }
 
-export interface ProductDTO {
+export interface ProductOnCreatePutDTO {
   id?: number
   nombre: string
   descripcion: string
-  categoria: ObjectID
+  categoria: ObjectID 
   activo: boolean
-  creadoEn: string
-  actualizadoEn: string
+  creadoEn?: string
+  actualizadoEn?: string
   disenoPersonalizado: ObjectID
+}
+
+export interface ProductOnGetDTO {
+  id?: number
+  nombre: string
+  descripcion: string
+  categoriaId: number
+  categoriaNombre: string
+  activo: boolean
+  creadoEn?: string
+  actualizadoEn?: string
+  disenoPersonalizado: DisenoPersonalizadoDTO
 }
 
 export interface ObjectID {

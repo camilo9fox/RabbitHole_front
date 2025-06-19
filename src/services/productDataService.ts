@@ -1,8 +1,7 @@
-import { ColorOption, SizeOption, FontOption, ApiColorDTO, ApiSizeDTO, ApiFontDTO, ProductCategoryDTO } from '@/types/productData';
+import { ColorOption, SizeOption, FontOption, ApiColorDTO, ApiSizeDTO, ApiFontDTO, ProductCategoryDTO, ProductOnGetDTO, ProductOnCreatePutDTO } from '@/types/productData';
 
 import { API_ROUTES } from '@/config/apiRoutes';
 import axios from "axios";
-import { ProductDTO } from "@/types/productData";
 
 /**
  * Obtiene los colores disponibles desde el backend
@@ -81,7 +80,7 @@ export const fetchCategories = async (): Promise<ProductCategoryDTO[]> => {
     }
 }
 
-export const fetchProducts = async () => {
+export const fetchProducts = async (): Promise<ProductOnGetDTO[]> => {
     try {
         const response = await axios.get(API_ROUTES.products);
         return response.data;
@@ -91,7 +90,17 @@ export const fetchProducts = async () => {
     }
 }
 
-export const createProduct = async (product: ProductDTO) => {
+export const fetchProductById = async (id: number): Promise<ProductOnGetDTO> => {
+    try {
+        const response = await axios.get(`${API_ROUTES.products}/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener producto por ID:', error);
+        throw error;
+    }
+}
+
+export const createProduct = async (product: ProductOnCreatePutDTO) => {
     try {
         const response = await axios.post(API_ROUTES.products, product);
         return response.data;
@@ -101,7 +110,7 @@ export const createProduct = async (product: ProductDTO) => {
     }
 }
 
-export const updateProduct = async (product: ProductDTO) => {
+export const updateProduct = async (product: ProductOnCreatePutDTO) => {
     try {
         const response = await axios.put(`${API_ROUTES.products}/${product.id}`, product);
         return response.data;

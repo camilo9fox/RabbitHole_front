@@ -44,9 +44,14 @@ export interface AnguloDTO {
     colorId?: string
     tamano?: number
     cloudinaryId?: string
+    nombreArchivo?: string
     url?: string
     publicId?: string
     urlImagen?: string
+    contenido?: string
+    fontFamily?: string
+    color?: string
+    fontSize?: number
   }
 
   

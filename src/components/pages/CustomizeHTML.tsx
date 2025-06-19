@@ -14,16 +14,16 @@ import Image from 'next/image';
 import { useUserRole } from '@/context/UserRoleContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminProductForm from '@/components/commons/organisms/AdminProductForm';
-import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail } from '@/services/adminProductService';
-import { createProduct, updateProduct } from '@/services/productDataService';
+import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail, imgSrcToBase64 } from '@/services/adminProductService';
+import { createProduct, fetchProductById, updateProduct } from '@/services/productDataService';
 import { createPersonalizedDesign, updatePersonalizedDesign } from '@/services/diseñoPersonalizadoService';
-import { ProductDTO } from '@/types/productData';
 import { DisenoPersonalizadoDTO } from '@/types/personalizedDesign';
 import { convertAngleDesignToDTO } from '@/utils/designConverter';
 import { AngleDesign } from '@/types/product';
 // Los tipos se usan en la función saveAdminProduct
 import { toast } from 'react-hot-toast';
 import { useProductData } from '@/context/ProductDataContext';
+import { ProductOnCreatePutDTO } from '@/types/productData';
 
 // Interfaces
 interface ViewCustomization {
@@ -608,7 +608,7 @@ const CustomizeHTML = () => {
       toast.loading('Guardando producto...');
       
       // 1. Preparar datos para la API
-      const productDTO: ProductDTO = {
+      const productDTO: ProductOnCreatePutDTO = {
         id: productId ? parseInt(productId) : undefined,
         nombre: formData.admin.name,
         descripcion: formData.admin.description,
@@ -955,100 +955,109 @@ const CustomizeHTML = () => {
     }
   };
   
+
   // La función getSelectedColorHex ya está definida arriba
   
   // Cargar producto existente si se proporciona un ID
   useEffect(() => {
-    if (productId && isAdmin) {
-      const loadedProduct = getAdminProductById(productId);
-      if (loadedProduct) {
-        // Cargar datos del producto en el formulario
-        // Usamos un color predeterminado ya que no guardamos colores específicos
-        setValue('color', loadedProduct?.selectedColor ?? 'white');
-        // Usamos una talla predeterminada ya que no guardamos tallas específicas
-        setValue('size', 'M');
-        setValue('basePrice', loadedProduct.price);
-        
-        // Cargar campos de administrador
-        setValue('admin.name', loadedProduct.name);
-        setValue('admin.description', loadedProduct.description);
-        setValue('admin.category', loadedProduct.category);
-        
-        // Cargar diseños de cada ángulo si existen
-        if (loadedProduct.angles?.front) {
-          setValue('front', {
-            thumbnail: loadedProduct.angles.front.thumbnail ?? '',
-            text: loadedProduct.angles.front.text?.content ?? '',
-            image: loadedProduct.angles.front.image?.src ?? null,
-            textFont: loadedProduct.angles.front.text?.font ?? 'Arial',
-            textColor: loadedProduct.angles.front.text?.color ?? '#000000',
-            textSize: loadedProduct.angles.front.text?.size ?? 30,
-            textPositionX: loadedProduct.angles.front.text?.position?.x ?? 250,
-            textPositionY: loadedProduct.angles.front.text?.position?.y ?? 250,
-            imagePositionX: loadedProduct.angles.front.image?.position?.x ?? 250,
-            imagePositionY: loadedProduct.angles.front.image?.position?.y ?? 250,
-            imageWidth: loadedProduct.angles.front.image?.size?.width ?? 150,
-            imageHeight: loadedProduct.angles.front.image?.size?.height ?? 150
-          });
+    const onLoadProduct = async () => {
+      if (productId && isAdmin) {
+        const loadedProduct = await fetchProductById(Number(productId));
+        if (loadedProduct) {
+          // Cargar datos del producto en el formulario
+          // Usamos un color predeterminado ya que no guardamos colores específicos
+          setValue('color', loadedProduct?.disenoPersonalizado?.colorId ?? 'white');
+          // Usamos una talla predeterminada ya que no guardamos tallas específicas
+          setValue('size', loadedProduct?.disenoPersonalizado?.tallaId ?? 'm');
+          setValue('basePrice', loadedProduct.disenoPersonalizado.precio);
+          
+          // Cargar campos de administrador
+          setValue('admin.name', loadedProduct.nombre);
+          setValue('admin.description', loadedProduct.descripcion);
+          setValue('admin.category', loadedProduct.categoriaId.toString());
+          const frontAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Frente');
+          const backAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Espalda');
+          const leftAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Izquierda');
+          const rightAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Derecha'); 
+          // Cargar diseños de cada ángulo si existen
+          console.log({frontAngle})
+          console.log({loadedProduct})
+          if (frontAngle) {
+            setValue('front', {
+              thumbnail: await imgSrcToBase64(frontAngle?.thumbnailUrl || '') || '',
+              text: frontAngle?.elemento?.propiedadesElemento?.contenido ?? '',
+              image: await imgSrcToBase64(frontAngle?.elemento?.propiedadesElemento.urlImagen || '') || null,
+              textFont: frontAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
+              textColor: frontAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textSize: frontAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
+              imageHeight: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+            });
+          }
+          
+          if (backAngle) {
+            setValue('back', {
+              thumbnail: frontAngle?.thumbnailUrl ?? '',
+              text: backAngle?.elemento?.propiedadesElemento?.contenido ?? '',
+              image: backAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont: backAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
+              textColor: backAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textSize: backAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
+              imageHeight: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+            });
+          }
+          
+          if (leftAngle) {
+            setValue('left', {
+              thumbnail: leftAngle?.thumbnailUrl ?? '',
+              text: leftAngle?.elemento?.propiedadesElemento?.contenido ?? '',
+              image: leftAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont: leftAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
+              textColor: leftAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textSize: leftAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
+              imageHeight: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+            });
+          }
+          
+          if (rightAngle) {
+            setValue('right', {
+              thumbnail: rightAngle?.thumbnailUrl ?? '',
+              text: rightAngle?.elemento?.propiedadesElemento?.contenido ?? '',
+              image: rightAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont: rightAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
+              textColor: rightAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textSize: rightAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
+              imageHeight: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+            });
+          }
+          
+          toast.success(`Producto "${loadedProduct.nombre}" cargado para edición`);
+        } else {
+          toast.error('No se encontró el producto solicitado');
         }
-        
-        if (loadedProduct.angles?.back) {
-          setValue('back', {
-            thumbnail: loadedProduct.angles.back.thumbnail ?? '',
-            text: loadedProduct.angles.back.text?.content ?? '',
-            image: loadedProduct.angles.back.image?.src ?? null,
-            textFont: loadedProduct.angles.back.text?.font ?? 'Arial',
-            textColor: loadedProduct.angles.back.text?.color ?? '#000000',
-            textSize: loadedProduct.angles.back.text?.size ?? 30,
-            textPositionX: loadedProduct.angles.back.text?.position?.x ?? 250,
-            textPositionY: loadedProduct.angles.back.text?.position?.y ?? 250,
-            imagePositionX: loadedProduct.angles.back.image?.position?.x ?? 250,
-            imagePositionY: loadedProduct.angles.back.image?.position?.y ?? 250,
-            imageWidth: loadedProduct.angles.back.image?.size?.width ?? 150,
-            imageHeight: loadedProduct.angles.back.image?.size?.height ?? 150
-          });
-        }
-        
-        if (loadedProduct.angles?.left) {
-          setValue('left', {
-            thumbnail: loadedProduct.angles.left.thumbnail ?? '',
-            text: loadedProduct.angles.left.text?.content ?? '',
-            image: loadedProduct.angles.left.image?.src ?? null,
-            textFont: loadedProduct.angles.left.text?.font ?? 'Arial',
-            textColor: loadedProduct.angles.left.text?.color ?? '#000000',
-            textSize: loadedProduct.angles.left.text?.size ?? 30,
-            textPositionX: loadedProduct.angles.left.text?.position?.x ?? 250,
-            textPositionY: loadedProduct.angles.left.text?.position?.y ?? 250,
-            imagePositionX: loadedProduct.angles.left.image?.position?.x ?? 250,
-            imagePositionY: loadedProduct.angles.left.image?.position?.y ?? 250,
-            imageWidth: loadedProduct.angles.left.image?.size?.width ?? 150,
-            imageHeight: loadedProduct.angles.left.image?.size?.height ?? 150
-          });
-        }
-        
-        if (loadedProduct.angles?.right) {
-          setValue('right', {
-            thumbnail: loadedProduct.angles.right.thumbnail ?? '',
-            text: loadedProduct.angles.right.text?.content ?? '',
-            image: loadedProduct.angles.right.image?.src ?? null,
-            textFont: loadedProduct.angles.right.text?.font ?? 'Arial',
-            textColor: loadedProduct.angles.right.text?.color ?? '#000000',
-            textSize: loadedProduct.angles.right.text?.size ?? 30,
-            textPositionX: loadedProduct.angles.right.text?.position?.x ?? 250,
-            textPositionY: loadedProduct.angles.right.text?.position?.y ?? 250,
-            imagePositionX: loadedProduct.angles.right.image?.position?.x ?? 250,
-            imagePositionY: loadedProduct.angles.right.image?.position?.y ?? 250,
-            imageWidth: loadedProduct.angles.right.image?.size?.width ?? 150,
-            imageHeight: loadedProduct.angles.right.image?.size?.height ?? 150
-          });
-        }
-        
-        toast.success(`Producto "${loadedProduct.name}" cargado para edición`);
-      } else {
-        toast.error('No se encontró el producto solicitado');
-      }
     }
-  }, [productId, isAdmin, setValue]);
+  }
+    onLoadProduct();
+  }, [productId, isAdmin, setValue]); 
   
   if (!isMounted) {
     return (
@@ -1468,5 +1477,7 @@ const CustomizeHTML = () => {
     </div>
   );
 };
+
+
 
 export default CustomizeHTML;
