@@ -969,9 +969,9 @@ const CustomizeHTML = () => {
           setValue('color', loadedProduct?.disenoPersonalizado?.colorId ?? 'white');
           // Usamos una talla predeterminada ya que no guardamos tallas específicas
           setValue('size', loadedProduct?.disenoPersonalizado?.tallaId ?? 'm');
-          setValue('basePrice', loadedProduct.disenoPersonalizado.precio);
           
           // Cargar campos de administrador
+          setValue('details', loadedProduct.disenoPersonalizado.detalle)
           setValue('admin.name', loadedProduct.nombre);
           setValue('admin.description', loadedProduct.descripcion);
           setValue('admin.category', loadedProduct.categoriaId.toString());
@@ -988,14 +988,14 @@ const CustomizeHTML = () => {
               text: frontAngle?.elemento?.propiedadesElemento?.contenido ?? '',
               image: await imgSrcToBase64(frontAngle?.elemento?.propiedadesElemento.urlImagen || '') || null,
               textFont: frontAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: frontAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textColor: colors.find((color) => color.value === frontAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
               textSize: frontAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
               textPositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               textPositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
               imagePositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               imagePositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
-              imageHeight: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+              imageWidth: frontAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
+              imageHeight: frontAngle?.elemento?.propiedadesDiseno?.altura ?? 250
             });
           }
           
@@ -1005,14 +1005,14 @@ const CustomizeHTML = () => {
               text: backAngle?.elemento?.propiedadesElemento?.contenido ?? '',
               image: backAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
               textFont: backAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: backAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textColor: colors.find((color) => color.value === backAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
               textSize: backAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
               textPositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               textPositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
               imagePositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               imagePositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
-              imageHeight: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+              imageWidth: backAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
+              imageHeight: backAngle?.elemento?.propiedadesDiseno?.altura ?? 250
             });
           }
           
@@ -1022,14 +1022,14 @@ const CustomizeHTML = () => {
               text: leftAngle?.elemento?.propiedadesElemento?.contenido ?? '',
               image: leftAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
               textFont: leftAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: leftAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textColor: colors.find((color) => color.value === leftAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
               textSize: leftAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
               textPositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               textPositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
               imagePositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               imagePositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
-              imageHeight: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+              imageWidth: leftAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
+              imageHeight: leftAngle?.elemento?.propiedadesDiseno?.altura ?? 250
             });
           }
           
@@ -1039,14 +1039,14 @@ const CustomizeHTML = () => {
               text: rightAngle?.elemento?.propiedadesElemento?.contenido ?? '',
               image: rightAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
               textFont: rightAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: rightAngle?.elemento?.propiedadesElemento?.color ?? '#000000',
+              textColor: colors.find((color) => color.value === rightAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
               textSize: rightAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
               textPositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               textPositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
               imagePositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
               imagePositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,    
-              imageHeight: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250
+              imageWidth: rightAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
+              imageHeight: rightAngle?.elemento?.propiedadesDiseno?.altura ?? 250
             });
           }
           
@@ -1057,7 +1057,7 @@ const CustomizeHTML = () => {
     }
   }
     onLoadProduct();
-  }, [productId, isAdmin, setValue]); 
+  }, [productId, isAdmin, colors, setValue]); 
   
   if (!isMounted) {
     return (

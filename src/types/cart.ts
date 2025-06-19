@@ -2,10 +2,10 @@
 
 // Estado de aprobación para diseños personalizados
 export enum CustomDesignStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  MODIFICATION_REQUESTED = 'modification_requested'
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  MODIFICATION_REQUESTED = "modification_requested",
 }
 
 // Información de una vista personalizada (frente, espalda, etc.)
@@ -27,7 +27,7 @@ export interface CustomView {
 // Diseño personalizado completo
 export interface CustomDesign {
   id: string;
-  userId?: string;            // Usuario que lo creó (si está autenticado)
+  userId?: string; // Usuario que lo creó (si está autenticado)
   name?: string;
   front: CustomView;
   back: CustomView;
@@ -38,15 +38,15 @@ export interface CustomDesign {
   status: CustomDesignStatus;
   rejectionReason?: string;
   modificationNotes?: string;
-  price: number;              // Precio base
+  price: number; // Precio base
   createdAt: Date;
   updatedAt: Date;
-  quantity?: number;          // Para mantener compatibilidad con código existente
+  quantity?: number; // Para mantener compatibilidad con código existente
 }
 
 // Producto estándar del catálogo
 export interface StandardProduct {
-  id: string;
+  id: string | number;
   name: string;
   description: string;
   price: number;
@@ -62,35 +62,35 @@ export interface StandardProduct {
 // Tipos de items en el carrito
 export enum CartItemType {
   // Mantenemos el enum anterior para compatibilidad
-  STANDARD = 'standard',
-  PRODUCT = 'product',
-  CUSTOM = 'custom'
+  STANDARD = "standard",
+  PRODUCT = "product",
+  CUSTOM = "custom",
 }
 
 // ----- NUEVAS INTERFACES PARA EL MODELO REFACTORIZADO -----
 
 // Item en el carrito (producto del catálogo)
 export interface ProductCartItem {
-  id: string;              // ID único para este item de carrito
+  id: string; // ID único para este item de carrito
   type: CartItemType.PRODUCT | CartItemType.STANDARD; // Soporta ambos tipos para compatibilidad
-  productId: string;       // Referencia al producto
-  color: string;           // Color seleccionado
-  size: string;            // Talla seleccionada
+  productId: string; // Referencia al producto
+  color: string; // Color seleccionado
+  size: string; // Talla seleccionada
   quantity: number;
-  unitPrice: number;       // Precio unitario al momento de agregar
-  price?: number;          // Para compatibilidad con código existente
+  unitPrice: number; // Precio unitario al momento de agregar
+  price?: number; // Para compatibilidad con código existente
   product?: StandardProduct; // Para compatibilidad con código existente
 }
 
 // Item en el carrito (diseño personalizado)
 export interface CustomCartItem {
-  id: string;              // ID único para este item de carrito
+  id: string; // ID único para este item de carrito
   type: CartItemType.CUSTOM;
-  designId: string;        // Referencia al diseño personalizado
+  designId: string; // Referencia al diseño personalizado
   quantity: number;
-  unitPrice: number;       // Precio unitario al momento de agregar
-  price?: number;          // Para compatibilidad con código existente
-  design?: CustomDesign;   // Para compatibilidad con código existente
+  unitPrice: number; // Precio unitario al momento de agregar
+  price?: number; // Para compatibilidad con código existente
+  design?: CustomDesign; // Para compatibilidad con código existente
 }
 
 // Tipo unión para cualquier item del carrito
@@ -127,9 +127,22 @@ export interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   price: number;
-  product?: { id: string; name: string; color?: string; size?: string; images?: string[]; price?: number; };
-  design?: { id: string; name?: string; color?: string; size?: string; front?: unknown; };
-};
+  product?: {
+    id: string;
+    name: string;
+    color?: string;
+    size?: string;
+    images?: string[];
+    price?: number;
+  };
+  design?: {
+    id: string;
+    name?: string;
+    color?: string;
+    size?: string;
+    front?: unknown;
+  };
+}
 
 // Carrito completo
 export interface Cart {
@@ -145,19 +158,34 @@ export interface Cart {
 
 // Funciones de tipo guard para verificar el tipo de item
 export const isProductItem = (item: unknown): item is ProductCartItem => {
-  return Boolean(item) && typeof item === 'object' && item !== null && 
-    ('type' in item && (item.type === CartItemType.PRODUCT || item.type === CartItemType.STANDARD));
+  return (
+    Boolean(item) &&
+    typeof item === "object" &&
+    item !== null &&
+    "type" in item &&
+    (item.type === CartItemType.PRODUCT || item.type === CartItemType.STANDARD)
+  );
 };
 
 export const isCustomItem = (item: unknown): item is CustomCartItem => {
-  return Boolean(item) && typeof item === 'object' && item !== null && 
-    ('type' in item && item.type === CartItemType.CUSTOM);
+  return (
+    Boolean(item) &&
+    typeof item === "object" &&
+    item !== null &&
+    "type" in item &&
+    item.type === CartItemType.CUSTOM
+  );
 };
 
 // Compatibilidad con código legacy
 export const isStandardItem = (item: unknown): item is ProductCartItem => {
-  return Boolean(item) && typeof item === 'object' && item !== null && 
-    ('type' in item && (item.type === CartItemType.PRODUCT || item.type === CartItemType.STANDARD));
+  return (
+    Boolean(item) &&
+    typeof item === "object" &&
+    item !== null &&
+    "type" in item &&
+    (item.type === CartItemType.PRODUCT || item.type === CartItemType.STANDARD)
+  );
 };
 
 // isExactlyStandardItem se ha eliminado por no ser necesario
@@ -182,29 +210,32 @@ type LegacyCartItem = {
   type: CartItemType;
 };
 
-export const convertToProductCartItem = (oldItem: LegacyCartItem): ProductCartItem => {
+export const convertToProductCartItem = (
+  oldItem: LegacyCartItem
+): ProductCartItem => {
   return {
     id: oldItem.product?.id ?? crypto.randomUUID(),
     type: CartItemType.PRODUCT,
-    productId: oldItem.product?.id ?? '',
-    color: oldItem.product?.color ?? '',
-    size: oldItem.product?.size ?? '',
+    productId: oldItem.product?.id ?? "",
+    color: oldItem.product?.color ?? "",
+    size: oldItem.product?.size ?? "",
     quantity: oldItem.quantity,
     unitPrice: oldItem.price,
     price: oldItem.price,
-    product: oldItem.product
+    product: oldItem.product,
   };
 };
 
-export const convertToCustomCartItem = (oldItem: LegacyCartItem): CustomCartItem => {
+export const convertToCustomCartItem = (
+  oldItem: LegacyCartItem
+): CustomCartItem => {
   return {
     id: oldItem.design?.id ?? crypto.randomUUID(),
     type: CartItemType.CUSTOM,
-    designId: oldItem.design?.id ?? '',
+    designId: oldItem.design?.id ?? "",
     quantity: oldItem.quantity,
     unitPrice: oldItem.price,
     price: oldItem.price,
-    design: oldItem.design
+    design: oldItem.design,
   };
 };
-

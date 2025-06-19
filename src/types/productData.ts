@@ -39,14 +39,14 @@ export interface ProductOnCreatePutDTO {
 }
 
 export interface ProductOnGetDTO {
-  id?: number
+  id: number
   nombre: string
   descripcion: string
   categoriaId: number
   categoriaNombre: string
-  activo: boolean
-  creadoEn?: string
-  actualizadoEn?: string
+  activo: number
+  creadoEn: number[]
+  actualizadoEn: number[]
   disenoPersonalizado: DisenoPersonalizadoDTO
 }
 

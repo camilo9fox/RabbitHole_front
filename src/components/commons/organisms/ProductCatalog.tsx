@@ -8,7 +8,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useTheme } from 'next-themes';
 
 export interface Product {
-  id: string;
+  id: string | number;
   name: string;
   image: string;
   price: number;

@@ -1,12 +1,12 @@
 import React from 'react';
 import ActionButton from '@/components/commons/atoms/ActionButton';
-import { AdminProduct } from '@/types/product';
+import { ProductOnGetDTO } from '@/types/productData';
 
 interface ProductActionsProps {
-  product: AdminProduct;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onToggleStore: (id: string) => void;
+  product: ProductOnGetDTO;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  onToggleStore: (id: number) => void;
   isDeleting: boolean;
   onCancelDelete: () => void;
 }
@@ -19,9 +19,9 @@ const ProductActions: React.FC<ProductActionsProps> = ({
   isDeleting,
   onCancelDelete
 }) => {
-  const storeButtonVariant = product.inStock ? 'warning' : 'success';
-  const storeButtonText = product.inStock ? 'Quitar' : 'Publicar';
-  const storeButtonTitle = product.inStock ? 'Quitar producto de la tienda' : 'Publicar producto en la tienda';
+  const storeButtonVariant = product.activo === 1 ? 'warning' : 'success';
+  const storeButtonText = product.activo === 1 ? 'Quitar' : 'Publicar';
+  const storeButtonTitle = product.activo === 1 ? 'Quitar producto de la tienda' : 'Publicar producto en la tienda';
   
   return (
     <div className="flex flex-wrap gap-1 justify-center items-center">
