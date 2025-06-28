@@ -556,7 +556,9 @@ export default function ProductDetail() {
                         <ProductCanvas
                           key={`hidden-canvas-${angle}-${selectedColor}`}
                           angle={angle}
-                          color={selectedColor ?? "#FFFFFF"}
+                          color={
+                            colors.find((c) => c.id === selectedColor)!.value
+                          }
                           design={
                             angleDesigns.find((a) => a.angle === angle)?.design
                           }

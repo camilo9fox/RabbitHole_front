@@ -1,29 +1,44 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useCart } from '@/context/CartContext';
-import { CustomDesignStatus } from '@/types/cart';
-import { useTheme } from 'next-themes';
-import Text from '@/components/commons/atoms/Text';
-import Button from '@/components/commons/atoms/Button';
-import Card from '@/components/commons/atoms/Card';
-import HTMLCanvasV2, { HTMLCanvasHandle } from '@/components/commons/molecules/HTMLCanvasV2';
-import { useForm, FormProvider } from 'react-hook-form';
-import gsap from 'gsap';
-import Image from 'next/image';
-import { useUserRole } from '@/context/UserRoleContext';
-import { useRouter, useSearchParams } from 'next/navigation';
-import AdminProductForm from '@/components/commons/organisms/AdminProductForm';
-import { getAdminProductById, saveAdminProduct, updateAdminProduct, generateThumbnail, imgSrcToBase64 } from '@/services/adminProductService';
-import { createProduct, fetchProductById, updateProduct } from '@/services/productDataService';
-import { createPersonalizedDesign, updatePersonalizedDesign } from '@/services/diseñoPersonalizadoService';
-import { DisenoPersonalizadoDTO } from '@/types/personalizedDesign';
-import { convertAngleDesignToDTO } from '@/utils/designConverter';
-import { AngleDesign } from '@/types/product';
+import React, { useState, useRef, useEffect } from "react";
+import { useCart } from "@/context/CartContext";
+import { CustomDesignStatus } from "@/types/cart";
+import { useTheme } from "next-themes";
+import Text from "@/components/commons/atoms/Text";
+import Button from "@/components/commons/atoms/Button";
+import Card from "@/components/commons/atoms/Card";
+import HTMLCanvasV2, {
+  HTMLCanvasHandle,
+} from "@/components/commons/molecules/HTMLCanvasV2";
+import { useForm, FormProvider } from "react-hook-form";
+import gsap from "gsap";
+import Image from "next/image";
+import { useUserRole } from "@/context/UserRoleContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import AdminProductForm from "@/components/commons/organisms/AdminProductForm";
+import {
+  getAdminProductById,
+  saveAdminProduct,
+  updateAdminProduct,
+  generateThumbnail,
+  imgSrcToBase64,
+} from "@/services/adminProductService";
+import {
+  createProduct,
+  fetchProductById,
+  updateProduct,
+} from "@/services/productDataService";
+import {
+  createPersonalizedDesign,
+  updatePersonalizedDesign,
+} from "@/services/diseñoPersonalizadoService";
+import { DisenoPersonalizadoDTO } from "@/types/personalizedDesign";
+import { convertAngleDesignToDTO } from "@/utils/designConverter";
+import { AngleDesign } from "@/types/product";
 // Los tipos se usan en la función saveAdminProduct
-import { toast } from 'react-hot-toast';
-import { useProductData } from '@/context/ProductDataContext';
-import { ProductOnCreatePutDTO } from '@/types/productData';
+import { toast } from "react-hot-toast";
+import { useProductData } from "@/context/ProductDataContext";
+import { ProductOnCreatePutDTO } from "@/types/productData";
 
 // Interfaces
 interface ViewCustomization {
@@ -46,7 +61,7 @@ interface CustomizationOptions {
   size: string;
   basePrice: number;
   details: string;
-  view: 'front' | 'back' | 'left' | 'right';
+  view: "front" | "back" | "left" | "right";
   // Personalización independiente para cada vista
   front: ViewCustomization;
   back: ViewCustomization;
@@ -63,32 +78,24 @@ interface CustomizationOptions {
 // Eliminando duplicación
 
 // Opciones predefinidas
-const predefinedColor = { 
-    id: 'white', 
-    label: 'Blanco', 
-    value: '#FFFFFF', 
-    textPreview: '#000000',
-    priceModifier: 0 
-  }
+const predefinedColor = {
+  id: "white",
+  label: "Blanco",
+  value: "#FFFFFF",
+  textPreview: "#000000",
+  priceModifier: 0,
+};
 
+const predefinedSize = { id: "m", label: "M", priceModifier: 0 };
 
-const predefinedSize = { id: 'm', label: 'M', priceModifier: 0 } 
-
-const textColorOptions = [
-  'black', 
-  'white',
-  'red',
-  'blue', 
-  'green', 
-  'yellow'
-];
+const textColorOptions = ["black", "white", "red", "blue", "green", "yellow"];
 
 // Vistas de la polera
 const tshirtViews = [
-  { id: 'front', label: 'Frente' },
-  { id: 'back', label: 'Espalda' },
-  { id: 'left', label: 'Izquierda' },
-  { id: 'right', label: 'Derecha' }
+  { id: "front", label: "Frente" },
+  { id: "back", label: "Espalda" },
+  { id: "left", label: "Izquierda" },
+  { id: "right", label: "Derecha" },
 ];
 
 const CustomizeHTML = () => {
@@ -98,184 +105,191 @@ const CustomizeHTML = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { colors, sizes, fonts } = useProductData();
-  const productId = searchParams.get('productId');
-  
-  useEffect(() => {
-    console.log({colors})
-    console.log({sizes})
-    console.log({fonts})
-  }, [colors, sizes, fonts])
+  const productId = searchParams.get("productId");
 
-  const isDarkMode = resolvedTheme === 'dark';
-  
+  useEffect(() => {
+    console.log({ colors });
+    console.log({ sizes });
+    console.log({ fonts });
+  }, [colors, sizes, fonts]);
+
+  const isDarkMode = resolvedTheme === "dark";
+
   // Referencias para animaciones
   const previewRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
-  
+
   // Referencias para los canvas de cada vista
   const frontCanvasRef = useRef<HTMLCanvasHandle>(null);
   const backCanvasRef = useRef<HTMLCanvasHandle>(null);
   const leftCanvasRef = useRef<HTMLCanvasHandle>(null);
   const rightCanvasRef = useRef<HTMLCanvasHandle>(null);
-  
+
   // Contexto del carrito
   const { addCustomItem } = useCart();
-  
+
   // Estados
   const [isPageMounted, setIsPageMounted] = useState(false);
-  
+
   // Formulario con React Hook Form
   const methods = useForm<CustomizationOptions>({
     defaultValues: {
-      color: 'white',
-      size: 'm',
+      color: "white",
+      size: "m",
       basePrice: 12990, // Precio base en pesos chilenos
-      details: '',
-      view: 'front',
+      details: "",
+      view: "front",
       // Valores predeterminados para cada vista
       front: {
-        thumbnail: '',
-        text: '',
+        thumbnail: "",
+        text: "",
         image: null,
-        textFont: 'Arial',
-        textColor: '#000000',
+        textFont: "Arial",
+        textColor: "#000000",
         textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
         imageWidth: 150,
-        imageHeight: 150
+        imageHeight: 150,
       },
       back: {
-        thumbnail: '',
-        text: '',
+        thumbnail: "",
+        text: "",
         image: null,
-        textFont: 'Arial',
-        textColor: '#000000',
+        textFont: "Arial",
+        textColor: "#000000",
         textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
         imageWidth: 150,
-        imageHeight: 150
+        imageHeight: 150,
       },
       left: {
-        thumbnail: '',
-        text: '',
+        thumbnail: "",
+        text: "",
         image: null,
-        textFont: 'Arial',
-        textColor: '#000000',
+        textFont: "Arial",
+        textColor: "#000000",
         textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
         imageWidth: 150,
-        imageHeight: 150
+        imageHeight: 150,
       },
       right: {
-        thumbnail: '',
-        text: '',
+        thumbnail: "",
+        text: "",
         image: null,
-        textFont: 'Arial',
-        textColor: '#000000',
+        textFont: "Arial",
+        textColor: "#000000",
         textSize: 30,
         textPositionX: 250,
         textPositionY: 250,
         imagePositionX: 250,
         imagePositionY: 250,
         imageWidth: 150,
-        imageHeight: 150
-      }
-    }
+        imageHeight: 150,
+      },
+    },
   });
-  
+
   const { watch, setValue, register } = methods;
   const formValues = watch();
-  
+
   // Obtener la vista actual
   const currentView = formValues.view;
   const currentViewData = formValues[currentView];
-  
+
   // Opciones seleccionadas
-  const selectedColorOption = colors.find(option => option.id === formValues.color) ?? predefinedColor;
-  const selectedFont = currentViewData.textFont || 'Arial';
-  const selectedSizeOption = sizes.find(option => option.id === formValues.size) ?? predefinedSize; // Default a M
-  
+  const selectedColorOption =
+    colors.find((option) => option.id === formValues.color) ?? predefinedColor;
+  const selectedFont = currentViewData.textFont || "Arial";
+  const selectedSizeOption =
+    sizes.find((option) => option.id === formValues.size) ?? predefinedSize; // Default a M
+
   // Calcular precio total
   const calculateTotalPrice = () => {
     let totalPrice = formValues.basePrice;
-    
+
     // Añadir costo por color
     totalPrice += selectedColorOption.priceModifier;
-    
+
     // Añadir costo por talla
     totalPrice += selectedSizeOption.priceModifier;
-    
+
     // Añadir costo por texto (1000 pesos si hay texto en cualquier vista)
-    const hasAnyText = Object.values(formValues).some(view => 
-      typeof view === 'object' && 'text' in view && view.text && view.text.trim() !== ''
+    const hasAnyText = Object.values(formValues).some(
+      (view) =>
+        typeof view === "object" &&
+        "text" in view &&
+        view.text &&
+        view.text.trim() !== ""
     );
     if (hasAnyText) {
       totalPrice += 1000;
     }
-    
+
     // Añadir costo por imagen (2000 pesos si hay imagen en cualquier vista)
-    const hasAnyImage = Object.values(formValues).some(view => 
-      typeof view === 'object' && 'image' in view && view.image !== null
+    const hasAnyImage = Object.values(formValues).some(
+      (view) =>
+        typeof view === "object" && "image" in view && view.image !== null
     );
     if (hasAnyImage) {
       totalPrice += 2000;
     }
-    
+
     return totalPrice;
   };
-  
+
   const totalPrice = calculateTotalPrice();
-  
+
   // Función para formatear precio en pesos chilenos
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
+      minimumFractionDigits: 0,
     }).format(price);
   };
-  
+
   // Funciones auxiliares para los estilos de botones
   const getViewButtonClass = (isSelected: boolean) => {
     if (isSelected) {
-      return 'px-3 py-2 text-sm rounded-full bg-blue-600 text-white';
+      return "px-3 py-2 text-sm rounded-full bg-blue-600 text-white";
     }
-    return 'px-3 py-2 text-sm rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+    return "px-3 py-2 text-sm rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200";
   };
-  
+
   const getSizeButtonClass = (isSelected: boolean) => {
     if (isSelected) {
-      return 'px-4 py-2 rounded-md bg-blue-600 text-white';
+      return "px-4 py-2 rounded-md bg-blue-600 text-white";
     }
-    
+
     if (isDarkMode) {
-      return 'px-4 py-2 rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      return "px-4 py-2 rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
-    
-    return 'px-4 py-2 rounded-md bg-gray-100 text-gray-800';
+
+    return "px-4 py-2 rounded-md bg-gray-100 text-gray-800";
   };
-  
+
   const getFontButtonClass = (isSelected: boolean) => {
     if (isSelected) {
-      return 'px-3 py-1 text-sm rounded-md bg-blue-600 text-white';
+      return "px-3 py-1 text-sm rounded-md bg-blue-600 text-white";
     }
-    
+
     if (isDarkMode) {
-      return 'px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      return "px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
-    
-    return 'px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800';
+
+    return "px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-800";
   };
-  
+
   // Manejar carga de imagen
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -285,52 +299,52 @@ const CustomizeHTML = () => {
         if (event.target?.result) {
           const imageData = event.target.result as string;
           setValue(`${currentView}.image`, imageData);
-          
+
           // Limpiar el campo de texto cuando se agrega una imagen
-          setValue(`${currentView}.text`, '');
+          setValue(`${currentView}.text`, "");
         }
       };
       reader.readAsDataURL(file);
     }
   };
-  
+
   // Función para eliminar la imagen
   const handleRemoveImage = () => {
     setValue(`${currentView}.image`, null);
   };
-  
+
   // Actualizar posición del texto
   const handleUpdateTextPosition = (x: number, y: number) => {
     setValue(`${currentView}.textPositionX`, x);
     setValue(`${currentView}.textPositionY`, y);
   };
-  
+
   // Actualizar tamaño del texto
   const handleUpdateTextSize = (size: number) => {
     setValue(`${currentView}.textSize`, size);
   };
-  
+
   // Actualizar posición de la imagen
   const handleUpdateImagePosition = (x: number, y: number) => {
     setValue(`${currentView}.imagePositionX`, x);
     setValue(`${currentView}.imagePositionY`, y);
   };
-  
+
   // Actualizar tamaño de la imagen
   const handleUpdateImageSize = (width: number, height: number) => {
     setValue(`${currentView}.imageWidth`, width);
     setValue(`${currentView}.imageHeight`, height);
   };
-  
+
   // Actualizar cuando cambia la vista
   useEffect(() => {
     // Cualquier lógica adicional cuando cambia la vista se puede agregar aquí
   }, [currentView]);
-  
+
   // Control de montaje de la página
   useEffect(() => {
     setIsPageMounted(true);
-    
+
     return () => {
       setIsPageMounted(false);
     };
@@ -340,9 +354,16 @@ const CustomizeHTML = () => {
   useEffect(() => {
     if (isPageMounted && previewRef.current && optionsRef.current) {
       const tl = gsap.timeline({ delay: 0.3 });
-      tl.from(previewRef.current, { opacity: 0, scale: 0.95, duration: 0.5 })
-        .from(optionsRef.current, { opacity: 0, y: 20, duration: 0.5 }, "-=0.3");
-      
+      tl.from(previewRef.current, {
+        opacity: 0,
+        scale: 0.95,
+        duration: 0.5,
+      }).from(
+        optionsRef.current,
+        { opacity: 0, y: 20, duration: 0.5 },
+        "-=0.3"
+      );
+
       return () => {
         tl.kill();
       };
@@ -350,112 +371,126 @@ const CustomizeHTML = () => {
   }, [isPageMounted, previewRef, optionsRef]);
 
   // Función para crear un objeto AngleDesign a partir de los datos del formulario
-  const getAngleDesign = (view: 'front' | 'back' | 'left' | 'right'): AngleDesign => {
+  const getAngleDesign = (
+    view: "front" | "back" | "left" | "right"
+  ): AngleDesign => {
     const viewData = formValues[view];
     const design: AngleDesign = {
-      thumbnail: viewData.thumbnail
+      thumbnail: viewData.thumbnail,
     };
-    
+
     // Añadir texto si existe
     if (viewData.text) {
       design.text = {
         content: viewData.text,
-        font: fonts.find(f => f.value === viewData.textFont)!.id,
-        color: viewData.textColor ?? 'white',
+        font: fonts.find((f) => f.value === viewData.textFont)!.id,
+        color: viewData.textColor ?? "white",
         size: viewData.textSize ?? 30,
         position: {
           x: viewData.textPositionX ?? 250,
-          y: viewData.textPositionY ?? 250
-        }
+          y: viewData.textPositionY ?? 250,
+        },
       };
     }
-    
+
     // Añadir imagen si existe
     if (viewData.image) {
       design.image = {
         src: viewData.image,
         position: {
           x: viewData.imagePositionX ?? 250,
-          y: viewData.imagePositionY ?? 250
+          y: viewData.imagePositionY ?? 250,
         },
         size: {
           width: viewData.imageWidth ?? 200,
-          height: viewData.imageHeight ?? 200
-        }
+          height: viewData.imageHeight ?? 200,
+        },
       };
     }
-    
+
     return design;
   };
-  
+
   // Función para obtener el color seleccionado en formato hexadecimal
   const getSelectedColorHex = (): string => {
-    return selectedColorOption?.value || '#FFFFFF';
+    return selectedColorOption?.value || "#FFFFFF";
   };
 
   // Función para verificar si un ángulo tiene diseño (imagen o texto)
-  const hasCustomizationInView = (view: 'front' | 'back' | 'left' | 'right'): boolean => {
+  const hasCustomizationInView = (
+    view: "front" | "back" | "left" | "right"
+  ): boolean => {
     return !!(formValues[view].text || formValues[view].image);
   };
 
   // Definir un tipo para las vistas de la polera
-  type TshirtView = 'front' | 'back' | 'left' | 'right';
+  type TshirtView = "front" | "back" | "left" | "right";
 
   // Función para guardar producto (admin) o agregar al carrito (usuario)
   const handleFormSubmit = async () => {
-    console.log('Iniciando handleFormSubmit');
+    console.log("Iniciando handleFormSubmit");
     // Validar el formulario
     const isValid = await methods.trigger();
-    console.log('Resultado de validación:', isValid);
-    console.log('Errores del formulario:', methods.formState.errors);
-    
+    console.log("Resultado de validación:", isValid);
+    console.log("Errores del formulario:", methods.formState.errors);
+
     if (!isValid) {
-      toast.error('Por favor, completa todos los campos requeridos');
+      toast.error("Por favor, completa todos los campos requeridos");
       return;
     }
-    console.log('Formulario válido, continuando...');
-    
+    console.log("Formulario válido, continuando...");
+
     if (isAdmin) {
       // Verificar qué vistas tienen personalización
-      const frontHasCustomization = hasCustomizationInView('front');
-      const backHasCustomization = hasCustomizationInView('back');
-      const leftHasCustomization = hasCustomizationInView('left');
-      const rightHasCustomization = hasCustomizationInView('right');
-      
+      const frontHasCustomization = hasCustomizationInView("front");
+      const backHasCustomization = hasCustomizationInView("back");
+      const leftHasCustomization = hasCustomizationInView("left");
+      const rightHasCustomization = hasCustomizationInView("right");
+
       // Verificar si hay al menos una vista personalizada
-      if (!frontHasCustomization && !backHasCustomization && !leftHasCustomization && !rightHasCustomization) {
-        toast.error('Por favor, personaliza al menos una vista antes de guardar el producto.');
+      if (
+        !frontHasCustomization &&
+        !backHasCustomization &&
+        !leftHasCustomization &&
+        !rightHasCustomization
+      ) {
+        toast.error(
+          "Por favor, personaliza al menos una vista antes de guardar el producto."
+        );
         return;
       }
-      
+
       // Guardar la vista actual para volver a ella al final
       const currentViewValue = formValues.view as TshirtView;
-      
+
       // Determinar qué vista mostrar según prioridad (front > back > left > right)
-      let viewToShow: TshirtView = 'front';
+      let viewToShow: TshirtView = "front";
       if (frontHasCustomization) {
-        viewToShow = 'front';
+        viewToShow = "front";
       } else if (backHasCustomization) {
-        viewToShow = 'back';
+        viewToShow = "back";
       } else if (leftHasCustomization) {
-        viewToShow = 'left';
+        viewToShow = "left";
       } else if (rightHasCustomization) {
-        viewToShow = 'right';
+        viewToShow = "right";
       }
-      
+
       // Cambiar a la vista con diseño para generar el thumbnail
-      setValue('view', viewToShow);
-      
+      setValue("view", viewToShow);
+
       // Función para generar un thumbnail a partir de un canvas
-      const generateThumbnailFromCanvas = async (canvasRef: React.RefObject<HTMLCanvasHandle | null>, canvasId: string): Promise<HTMLCanvasElement | null> => {
+      const generateThumbnailFromCanvas = async (
+        canvasRef: React.RefObject<HTMLCanvasHandle | null>,
+        canvasId: string
+      ): Promise<HTMLCanvasElement | null> => {
         let canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         if (!canvas && canvasRef.current) {
           const imageUrl = canvasRef.current.captureCanvas();
           if (imageUrl) {
-            canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
             if (ctx) {
-              const img = document.createElement('img');
+              const img = document.createElement("img");
               img.src = imageUrl;
               await new Promise<void>((resolve) => {
                 img.onload = () => resolve();
@@ -469,7 +504,7 @@ const CustomizeHTML = () => {
         }
         return canvas;
       };
-      
+
       // Esperamos a que se actualice la vista inicial antes de comenzar
       setTimeout(() => {
         // Función para procesar las vistas secuencialmente
@@ -479,112 +514,131 @@ const CustomizeHTML = () => {
           let backCanvas: HTMLCanvasElement | null = null;
           let leftCanvas: HTMLCanvasElement | null = null;
           let rightCanvas: HTMLCanvasElement | null = null;
-          
+
           // Función auxiliar para cambiar la vista y esperar a que se renderice
-          const switchToViewAndWait = async (view: 'front' | 'back' | 'left' | 'right'): Promise<void> => {
+          const switchToViewAndWait = async (
+            view: "front" | "back" | "left" | "right"
+          ): Promise<void> => {
             console.log(`Cambiando a vista: ${view}`);
-            setValue('view', view);
+            setValue("view", view);
             // Esperamos más tiempo para asegurar que el canvas se renderice completamente
-            return new Promise(resolve => setTimeout(resolve, 500)); 
+            return new Promise((resolve) => setTimeout(resolve, 500));
           };
 
           try {
             const originalView = formValues.view;
-            console.log('Vista original:', originalView);
-            
+            console.log("Vista original:", originalView);
+
             // Procesar vista frontal si tiene personalización
             if (frontHasCustomization) {
-              await switchToViewAndWait('front');
-              console.log('Generando thumbnail para Front');
-              frontCanvas = await generateThumbnailFromCanvas(frontCanvasRef, 'canvas-front');
-              console.log('¿Se obtuvo el canvas de Front?', !!frontCanvas);
-              if(frontCanvas) {
+              await switchToViewAndWait("front");
+              console.log("Generando thumbnail para Front");
+              frontCanvas = await generateThumbnailFromCanvas(
+                frontCanvasRef,
+                "canvas-front"
+              );
+              console.log("¿Se obtuvo el canvas de Front?", !!frontCanvas);
+              if (frontCanvas) {
                 const thumbnailUrlFront = generateThumbnail(frontCanvas);
-                setValue('front.thumbnail', thumbnailUrlFront);
-                console.log('Thumbnail de Front guardado correctamente');
+                setValue("front.thumbnail", thumbnailUrlFront);
+                console.log("Thumbnail de Front guardado correctamente");
               }
             }
-            
+
             // Procesar vista trasera si tiene personalización
             if (backHasCustomization) {
-              await switchToViewAndWait('back');
-              console.log('Generando thumbnail para Back');
-              console.log('¿Existe backCanvasRef?', !!backCanvasRef.current);
-              backCanvas = await generateThumbnailFromCanvas(backCanvasRef, 'canvas-back');
-              console.log('¿Se obtuvo el canvas de Back?', !!backCanvas);
-              if(backCanvas) {
+              await switchToViewAndWait("back");
+              console.log("Generando thumbnail para Back");
+              console.log("¿Existe backCanvasRef?", !!backCanvasRef.current);
+              backCanvas = await generateThumbnailFromCanvas(
+                backCanvasRef,
+                "canvas-back"
+              );
+              console.log("¿Se obtuvo el canvas de Back?", !!backCanvas);
+              if (backCanvas) {
                 const thumbnailUrlBack = generateThumbnail(backCanvas);
-                setValue('back.thumbnail', thumbnailUrlBack);
-                console.log('Thumbnail de Back guardado correctamente');
+                setValue("back.thumbnail", thumbnailUrlBack);
+                console.log("Thumbnail de Back guardado correctamente");
               } else {
-                console.error('No se pudo obtener el canvas para la vista Back');
+                console.error(
+                  "No se pudo obtener el canvas para la vista Back"
+                );
               }
             }
-            
+
             // Procesar vista izquierda si tiene personalización
             if (leftHasCustomization) {
-              await switchToViewAndWait('left');
-              console.log('Generando thumbnail para Left');
-              leftCanvas = await generateThumbnailFromCanvas(leftCanvasRef, 'canvas-left');
-              console.log('¿Se obtuvo el canvas de Left?', !!leftCanvas);
-              if(leftCanvas) {
+              await switchToViewAndWait("left");
+              console.log("Generando thumbnail para Left");
+              leftCanvas = await generateThumbnailFromCanvas(
+                leftCanvasRef,
+                "canvas-left"
+              );
+              console.log("¿Se obtuvo el canvas de Left?", !!leftCanvas);
+              if (leftCanvas) {
                 const thumbnailUrlLeft = generateThumbnail(leftCanvas);
-                setValue('left.thumbnail', thumbnailUrlLeft);
-                console.log('Thumbnail de Left guardado correctamente');
+                setValue("left.thumbnail", thumbnailUrlLeft);
+                console.log("Thumbnail de Left guardado correctamente");
               }
             }
-            
+
             // Procesar vista derecha si tiene personalización
             if (rightHasCustomization) {
-              await switchToViewAndWait('right');
-              console.log('Generando thumbnail para Right');
-              rightCanvas = await generateThumbnailFromCanvas(rightCanvasRef, 'canvas-right');
-              console.log('¿Se obtuvo el canvas de Right?', !!rightCanvas);
-              if(rightCanvas) {
+              await switchToViewAndWait("right");
+              console.log("Generando thumbnail para Right");
+              rightCanvas = await generateThumbnailFromCanvas(
+                rightCanvasRef,
+                "canvas-right"
+              );
+              console.log("¿Se obtuvo el canvas de Right?", !!rightCanvas);
+              if (rightCanvas) {
                 const thumbnailUrlRight = generateThumbnail(rightCanvas);
-                setValue('right.thumbnail', thumbnailUrlRight);
-                console.log('Thumbnail de Right guardado correctamente');
+                setValue("right.thumbnail", thumbnailUrlRight);
+                console.log("Thumbnail de Right guardado correctamente");
               }
             }
-            
+
             // Volver a la vista que se usará como thumbnail principal
             console.log(`Volviendo a la vista principal: ${viewToShow}`);
             await switchToViewAndWait(viewToShow);
 
             // Seleccionar el canvas principal según la vista a mostrar
             switch (viewToShow) {
-              case 'front':
+              case "front":
                 thumbnailCanvas = frontCanvas;
                 break;
-              case 'back':
+              case "back":
                 thumbnailCanvas = backCanvas;
                 break;
-              case 'left':
+              case "left":
                 thumbnailCanvas = leftCanvas;
                 break;
-              case 'right':
+              case "right":
                 thumbnailCanvas = rightCanvas;
                 break;
             }
-            
+
             if (!thumbnailCanvas) {
-              toast.error(`Error al generar la miniatura: No se encontró el canvas para la vista ${viewToShow}`);
+              toast.error(
+                `Error al generar la miniatura: No se encontró el canvas para la vista ${viewToShow}`
+              );
               return;
             }
-            
+
             // Generar thumbnail para la imagen principal
             const thumbnailUrl = generateThumbnail(thumbnailCanvas);
-            console.log('Thumbnail generado desde la vista:', viewToShow);
-            
+            console.log("Thumbnail generado desde la vista:", viewToShow);
+
             // Finalizar el guardado del producto con el thumbnail generado
             finishProductSave(thumbnailUrl, currentViewValue);
-            
           } catch (error) {
-            console.error('Error al generar el thumbnail:', error);
-            toast.error('Ocurrió un error al generar la miniatura del producto');
+            console.error("Error al generar el thumbnail:", error);
+            toast.error(
+              "Ocurrió un error al generar la miniatura del producto"
+            );
           }
         };
-        
+
         // Llamar a la función para procesar todas las vistas
         processViews();
       }, 200);
@@ -593,44 +647,55 @@ const CustomizeHTML = () => {
       handleAddToCart();
     }
   };
-  
+
   // Función para finalizar el guardado del producto con el thumbnail generado
-  const finishProductSave = async (thumbnailUrl: string, originalView: TshirtView) => {
-    setValue('view', originalView);
+  const finishProductSave = async (
+    thumbnailUrl: string,
+    originalView: TshirtView
+  ) => {
+    setValue("view", originalView);
     const formData = methods.getValues();
     if (!formData.admin) {
-      toast.error('Error: Faltan los campos de administrador');
+      toast.error("Error: Faltan los campos de administrador");
       return;
     }
-    
+
     try {
       // Mostrar notificación de procesamiento
-      toast.loading('Guardando producto...');
-      
+      toast.loading("Guardando producto...");
+
       // 1. Preparar datos para la API
       const productDTO: ProductOnCreatePutDTO = {
         id: productId ? parseInt(productId) : undefined,
         nombre: formData.admin.name,
         descripcion: formData.admin.description,
         categoria: {
-          id: parseInt(formData.admin.category) // Asumiendo que category es el ID como string
+          id: parseInt(formData.admin.category), // Asumiendo que category es el ID como string
         },
         activo: true,
         disenoPersonalizado: {
-          id: 1 // ID del diseño personalizado
-        }
+          id: 1, // ID del diseño personalizado
+        },
       };
-      
+
       // 2. Preparar datos del diseño personalizado
       const angulosDTO = [
         // Crear ángulos solo para vistas que tienen customización
-        hasCustomizationInView('front') ? convertAngleDesignToDTO(getAngleDesign('front'), 'front') : null,
-        hasCustomizationInView('back') ? convertAngleDesignToDTO(getAngleDesign('back'), 'back') : null,
-        hasCustomizationInView('left') ? convertAngleDesignToDTO(getAngleDesign('left'), 'left') : null,
-        hasCustomizationInView('right') ? convertAngleDesignToDTO(getAngleDesign('right'), 'right') : null
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hasCustomizationInView("front")
+          ? convertAngleDesignToDTO(getAngleDesign("front"), "front")
+          : null,
+        hasCustomizationInView("back")
+          ? convertAngleDesignToDTO(getAngleDesign("back"), "back")
+          : null,
+        hasCustomizationInView("left")
+          ? convertAngleDesignToDTO(getAngleDesign("left"), "left")
+          : null,
+        hasCustomizationInView("right")
+          ? convertAngleDesignToDTO(getAngleDesign("right"), "right")
+          : null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ].filter(Boolean) as any[]; // Eliminar los nulls
-      
+
       const disenoPersonalizadoDTO: DisenoPersonalizadoDTO = {
         usuarioId: 1, // ID del administrador (asumimos 1 como admin)
         detalle: formData.details,
@@ -641,14 +706,14 @@ const CustomizeHTML = () => {
         creadoPorAdmin: true,
         angulos: angulosDTO,
       };
-      
+
       // 3. Crear o actualizar producto y diseño personalizado
       if (productId) {
         // Actualizar producto existente
         productDTO.id = Number(productId);
         const updatedProduct = await updateProduct(productDTO);
-        console.log('Producto actualizado:', updatedProduct);
-        
+        console.log("Producto actualizado:", updatedProduct);
+
         // También actualizamos en localStorage para mantener compatibilidad
         const existingProduct = getAdminProductById(productId);
         if (existingProduct) {
@@ -662,49 +727,55 @@ const CustomizeHTML = () => {
             thumbnail: thumbnailUrl,
             selectedColor: selectedColorOption.id,
             angles: {
-              front: getAngleDesign('front'),
-              back: getAngleDesign('back'),
-              left: getAngleDesign('left'),
-              right: getAngleDesign('right')
+              front: getAngleDesign("front"),
+              back: getAngleDesign("back"),
+              left: getAngleDesign("left"),
+              right: getAngleDesign("right"),
             },
-            baseColor: formData.color
+            baseColor: formData.color,
           };
-          const updatedLocalProduct = { ...existingProduct, ...localProductData, id: productId };
+          const updatedLocalProduct = {
+            ...existingProduct,
+            ...localProductData,
+            id: productId,
+          };
           updateAdminProduct(updatedLocalProduct);
         }
-        
+
         // Actualizar el diseño personalizado asociado si existe
         if (updatedProduct.disenoPersonalizado?.id) {
           await updatePersonalizedDesign({
             ...disenoPersonalizadoDTO,
-            id: updatedProduct.disenoPersonalizado.id
+            id: updatedProduct.disenoPersonalizado.id,
           });
         } else {
           // Si no existe, creamos uno nuevo y lo asociamos
-          const newDiseno = await createPersonalizedDesign(disenoPersonalizadoDTO);
+          const newDiseno = await createPersonalizedDesign(
+            disenoPersonalizadoDTO
+          );
           // Aquí deberíamos actualizar el producto con el ID del diseño nuevo
           if (newDiseno && newDiseno.id) {
             productDTO.disenoPersonalizado.id = newDiseno.id;
-            await updateProduct(
-              productDTO
-            );
+            await updateProduct(productDTO);
           }
         }
-        
-        toast.success('Producto actualizado correctamente');
+
+        toast.success("Producto actualizado correctamente");
       } else {
         // Crear nuevo producto
         // Primero creamos el diseño personalizado
-        const newDiseno = await createPersonalizedDesign(disenoPersonalizadoDTO);
-        
+        const newDiseno = await createPersonalizedDesign(
+          disenoPersonalizadoDTO
+        );
+
         // Luego creamos el producto asociado
         if (newDiseno && newDiseno.id) {
           productDTO.disenoPersonalizado = {
-            id: newDiseno.id
+            id: newDiseno.id,
           };
           const newProduct = await createProduct(productDTO);
-          console.log('Nuevo producto creado:', newProduct);
-          
+          console.log("Nuevo producto creado:", newProduct);
+
           // También guardamos en localStorage para mantener compatibilidad
           const localProductData = {
             name: formData.admin.name,
@@ -716,29 +787,33 @@ const CustomizeHTML = () => {
             thumbnail: thumbnailUrl,
             selectedColor: selectedColorOption.id,
             angles: {
-              front: getAngleDesign('front'),
-              back: getAngleDesign('back'),
-              left: getAngleDesign('left'),
-              right: getAngleDesign('right')
+              front: getAngleDesign("front"),
+              back: getAngleDesign("back"),
+              left: getAngleDesign("left"),
+              right: getAngleDesign("right"),
             },
             baseColor: formData.color,
-            id: newProduct.id.toString() // Usamos el ID de la API
+            id: newProduct.id.toString(), // Usamos el ID de la API
           };
           saveAdminProduct(localProductData);
         } else {
-          throw new Error('Error al crear el diseño personalizado');
+          throw new Error("Error al crear el diseño personalizado");
         }
-        
-        toast.success('Producto creado correctamente');
+
+        toast.success("Producto creado correctamente");
       }
-      
+
       // Redireccionar después de guardar
       setTimeout(() => {
-        router.push('/admin/products');
+        router.push("/admin/products");
       }, 1000); // Pequeño retraso para que el usuario vea el mensaje de éxito
     } catch (error: unknown) {
-      console.error('Error al guardar producto:', error);
-      toast.error(productId ? 'Error al actualizar el producto' : 'Error al crear el producto');
+      console.error("Error al guardar producto:", error);
+      toast.error(
+        productId
+          ? "Error al actualizar el producto"
+          : "Error al crear el producto"
+      );
     }
   };
 
@@ -746,44 +821,53 @@ const CustomizeHTML = () => {
   const handleAddToCart = () => {
     // Guardar la vista actual para volver a ella
     const currentViewValue = formValues.view;
-    
+
     // Animar la previsualización al agregar al carrito
     if (previewRef.current) {
       gsap.to(previewRef.current, {
         scale: 1.02,
         duration: 0.3,
         yoyo: true,
-        repeat: 1
+        repeat: 1,
       });
     }
-    
+
     // Identificar qué vistas fueron personalizadas (tienen texto o imagen)
-    const hasCustomizationInView = (view: 'front' | 'back' | 'left' | 'right'): boolean => {
+    const hasCustomizationInView = (
+      view: "front" | "back" | "left" | "right"
+    ): boolean => {
       return !!(formValues[view].text || formValues[view].image);
     };
-    
+
     // Verificar qué vistas tienen personalización
-    const frontHasCustomization = hasCustomizationInView('front');
-    const backHasCustomization = hasCustomizationInView('back');
-    const leftHasCustomization = hasCustomizationInView('left');
-    const rightHasCustomization = hasCustomizationInView('right');
-    
+    const frontHasCustomization = hasCustomizationInView("front");
+    const backHasCustomization = hasCustomizationInView("back");
+    const leftHasCustomization = hasCustomizationInView("left");
+    const rightHasCustomization = hasCustomizationInView("right");
+
     // Verificar si hay al menos una vista personalizada
-    if (!frontHasCustomization && !backHasCustomization && !leftHasCustomization && !rightHasCustomization) {
-      alert('Por favor, personaliza al menos una vista antes de agregar al carrito.');
+    if (
+      !frontHasCustomization &&
+      !backHasCustomization &&
+      !leftHasCustomization &&
+      !rightHasCustomization
+    ) {
+      alert(
+        "Por favor, personaliza al menos una vista antes de agregar al carrito."
+      );
       return;
     }
-    
+
     // Variables para almacenar las imágenes capturadas
     let frontImage: string | undefined;
     let backImage: string | undefined;
     let leftImage: string | undefined;
     let rightImage: string | undefined;
-    
+
     // Capturar vista frontal si tiene personalización
     const captureFront = () => {
       if (frontHasCustomization) {
-        setValue('view', 'front');
+        setValue("view", "front");
         setTimeout(() => {
           frontImage = frontCanvasRef.current?.captureCanvas();
           captureBack();
@@ -792,11 +876,11 @@ const CustomizeHTML = () => {
         captureBack();
       }
     };
-    
+
     // Capturar vista trasera si tiene personalización
     const captureBack = () => {
       if (backHasCustomization) {
-        setValue('view', 'back');
+        setValue("view", "back");
         setTimeout(() => {
           backImage = backCanvasRef.current?.captureCanvas();
           captureLeft();
@@ -805,11 +889,11 @@ const CustomizeHTML = () => {
         captureLeft();
       }
     };
-    
+
     // Capturar vista izquierda si tiene personalización
     const captureLeft = () => {
       if (leftHasCustomization) {
-        setValue('view', 'left');
+        setValue("view", "left");
         setTimeout(() => {
           leftImage = leftCanvasRef.current?.captureCanvas();
           captureRight();
@@ -818,11 +902,11 @@ const CustomizeHTML = () => {
         captureRight();
       }
     };
-    
+
     // Capturar vista derecha si tiene personalización
     const captureRight = () => {
       if (rightHasCustomization) {
-        setValue('view', 'right');
+        setValue("view", "right");
         setTimeout(() => {
           rightImage = rightCanvasRef.current?.captureCanvas();
           finishCapture();
@@ -831,25 +915,25 @@ const CustomizeHTML = () => {
         finishCapture();
       }
     };
-    
+
     // Finalizar la captura y crear el objeto de diseño personalizado
     const finishCapture = () => {
       // Volver a la vista original
-      setValue('view', currentViewValue);
-      
+      setValue("view", currentViewValue);
+
       // Crear el objeto de diseño personalizado
       const customDesign = {
         id: `custom-${Date.now()}`,
-        name: 'Polera Personalizada',
+        name: "Polera Personalizada",
         price: totalPrice,
         quantity: 1,
-        color: selectedColorOption.label,
-        size: selectedSizeOption.label,
+        color: selectedColorOption.id,
+        size: selectedSizeOption.id,
         status: CustomDesignStatus.PENDING, // Estado inicial: pendiente de aprobación
         front: {
-          text: formValues.front.text || '',
+          text: formValues.front.text || "",
           image: formValues.front.image,
-          textFont: selectedFont,
+          textFont: fonts.find((font) => font.label === selectedFont)!.id,
           textColor: formValues.front.textColor,
           textSize: formValues.front.textSize,
           textPositionX: formValues.front.textPositionX,
@@ -858,12 +942,12 @@ const CustomizeHTML = () => {
           imagePositionY: formValues.front.imagePositionY,
           imageWidth: formValues.front.imageWidth,
           imageHeight: formValues.front.imageHeight,
-          previewImage: frontImage
+          previewImage: frontImage,
         },
         back: {
-          text: formValues.back.text || '',
+          text: formValues.back.text || "",
           image: formValues.back.image,
-          textFont: selectedFont,
+          textFont: fonts.find((font) => font.label === selectedFont)!.id,
           textColor: formValues.back.textColor,
           textSize: formValues.back.textSize,
           textPositionX: formValues.back.textPositionX,
@@ -872,12 +956,12 @@ const CustomizeHTML = () => {
           imagePositionY: formValues.back.imagePositionY,
           imageWidth: formValues.back.imageWidth,
           imageHeight: formValues.back.imageHeight,
-          previewImage: backImage
+          previewImage: backImage,
         },
         left: {
-          text: formValues.left.text || '',
+          text: formValues.left.text || "",
           image: formValues.left.image,
-          textFont: selectedFont,
+          textFont: fonts.find((font) => font.label === selectedFont)!.id,
           textColor: formValues.left.textColor,
           textSize: formValues.left.textSize,
           textPositionX: formValues.left.textPositionX,
@@ -886,12 +970,12 @@ const CustomizeHTML = () => {
           imagePositionY: formValues.left.imagePositionY,
           imageWidth: formValues.left.imageWidth,
           imageHeight: formValues.left.imageHeight,
-          previewImage: leftImage
+          previewImage: leftImage,
         },
         right: {
-          text: formValues.right.text || '',
+          text: formValues.right.text || "",
           image: formValues.right.image,
-          textFont: selectedFont,
+          textFont: fonts.find((font) => font.label === selectedFont)!.id,
           textColor: formValues.right.textColor,
           textSize: formValues.right.textSize,
           textPositionX: formValues.right.textPositionX,
@@ -900,64 +984,63 @@ const CustomizeHTML = () => {
           imagePositionY: formValues.right.imagePositionY,
           imageWidth: formValues.right.imageWidth,
           imageHeight: formValues.right.imageHeight,
-          previewImage: rightImage
+          previewImage: rightImage,
         },
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      
+
       // Añadir al carrito
       addCustomItem(customDesign, 1);
-      
+
       // Mostrar mensaje de éxito
-      alert('¡Diseño personalizado añadido al carrito!');
-      
+      alert("¡Diseño personalizado añadido al carrito!");
+
       // Opcional: redirigir al carrito o a otra página
       // router.push('/cart');
-      
-      console.log('Producto personalizado agregado al carrito:', customDesign);
+
+      console.log("Producto personalizado agregado al carrito:", customDesign);
     };
-    
+
     // Iniciar el proceso de captura
     captureFront();
   };
-  
+
   // Solución para problemas de hidratación
   const [isMounted, setIsMounted] = useState(false);
-  
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
+
   // Obtener la ruta de la imagen de la polera según la vista seleccionada y el color
   const getTshirtImagePath = () => {
     // Si el color seleccionado es negro, usar la imagen de polera negra
-    if (formValues.color === 'black') {
+    if (formValues.color === "black") {
       // Mapeo de vistas para la polera negra
       const blackTshirtViewMap: Record<string, string> = {
-        'front': '/assets/products/black-tshirt/black-tshirt-frente.png',
-        'back': '/assets/products/black-tshirt/black-tshirt-espalda.png',
-        'left': '/assets/products/black-tshirt/black-tshirt-izquierda.png',
-        'right': '/assets/products/black-tshirt/black-tshirt-derecha.png'
+        front: "/assets/products/black-tshirt/black-tshirt-frente.png",
+        back: "/assets/products/black-tshirt/black-tshirt-espalda.png",
+        left: "/assets/products/black-tshirt/black-tshirt-izquierda.png",
+        right: "/assets/products/black-tshirt/black-tshirt-derecha.png",
       };
-      
-      return blackTshirtViewMap[formValues.view] || blackTshirtViewMap['front'];
+
+      return blackTshirtViewMap[formValues.view] || blackTshirtViewMap["front"];
     } else {
       // Para otros colores, usar la polera blanca como base para la coloración
       const whiteTshirtViewMap: Record<string, string> = {
-        'front': '/assets/products/white-tshirt/white-tshirt-frente.png',
-        'back': '/assets/products/white-tshirt/white-tshirt-espalda.png',
-        'left': '/assets/products/white-tshirt/white-tshirt-izquierda.png',
-        'right': '/assets/products/white-tshirt/white-tshirt-derecha.png'
+        front: "/assets/products/white-tshirt/white-tshirt-frente.png",
+        back: "/assets/products/white-tshirt/white-tshirt-espalda.png",
+        left: "/assets/products/white-tshirt/white-tshirt-izquierda.png",
+        right: "/assets/products/white-tshirt/white-tshirt-derecha.png",
       };
-      
-      return whiteTshirtViewMap[formValues.view] || whiteTshirtViewMap['front'];
+
+      return whiteTshirtViewMap[formValues.view] || whiteTshirtViewMap["front"];
     }
   };
-  
 
   // La función getSelectedColorHex ya está definida arriba
-  
+
   // Cargar producto existente si se proporciona un ID
   useEffect(() => {
     const onLoadProduct = async () => {
@@ -966,108 +1049,190 @@ const CustomizeHTML = () => {
         if (loadedProduct) {
           // Cargar datos del producto en el formulario
           // Usamos un color predeterminado ya que no guardamos colores específicos
-          setValue('color', loadedProduct?.disenoPersonalizado?.colorId ?? 'white');
+          setValue(
+            "color",
+            loadedProduct?.disenoPersonalizado?.colorId ?? "white"
+          );
           // Usamos una talla predeterminada ya que no guardamos tallas específicas
-          setValue('size', loadedProduct?.disenoPersonalizado?.tallaId ?? 'm');
-          
+          setValue("size", loadedProduct?.disenoPersonalizado?.tallaId ?? "m");
+
           // Cargar campos de administrador
-          setValue('details', loadedProduct.disenoPersonalizado.detalle)
-          setValue('admin.name', loadedProduct.nombre);
-          setValue('admin.description', loadedProduct.descripcion);
-          setValue('admin.category', loadedProduct.categoriaId.toString());
-          const frontAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Frente');
-          const backAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Espalda');
-          const leftAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Izquierda');
-          const rightAngle = loadedProduct.disenoPersonalizado.angulos?.find((angle) => angle.nombreAngulo === 'Derecha'); 
+          setValue("details", loadedProduct.disenoPersonalizado.detalle);
+          setValue("admin.name", loadedProduct.nombre);
+          setValue("admin.description", loadedProduct.descripcion);
+          setValue("admin.category", loadedProduct.categoriaId.toString());
+          const frontAngle = loadedProduct.disenoPersonalizado.angulos?.find(
+            (angle) => angle.nombreAngulo === "Frente"
+          );
+          const backAngle = loadedProduct.disenoPersonalizado.angulos?.find(
+            (angle) => angle.nombreAngulo === "Espalda"
+          );
+          const leftAngle = loadedProduct.disenoPersonalizado.angulos?.find(
+            (angle) => angle.nombreAngulo === "Izquierda"
+          );
+          const rightAngle = loadedProduct.disenoPersonalizado.angulos?.find(
+            (angle) => angle.nombreAngulo === "Derecha"
+          );
           // Cargar diseños de cada ángulo si existen
-          console.log({frontAngle})
-          console.log({loadedProduct})
+          console.log({ frontAngle });
+          console.log({ loadedProduct });
           if (frontAngle) {
-            setValue('front', {
-              thumbnail: await imgSrcToBase64(frontAngle?.thumbnailUrl || '') || '',
-              text: frontAngle?.elemento?.propiedadesElemento?.contenido ?? '',
-              image: await imgSrcToBase64(frontAngle?.elemento?.propiedadesElemento.urlImagen || '') || null,
-              textFont: frontAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: colors.find((color) => color.value === frontAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
-              textSize: frontAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
-              textPositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              textPositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imagePositionX: frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              imagePositionY: frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: frontAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
-              imageHeight: frontAngle?.elemento?.propiedadesDiseno?.altura ?? 250
+            setValue("front", {
+              thumbnail:
+                (await imgSrcToBase64(frontAngle?.thumbnailUrl || "")) || "",
+              text: frontAngle?.elemento?.propiedadesElemento?.contenido ?? "",
+              image:
+                (await imgSrcToBase64(
+                  frontAngle?.elemento?.propiedadesElemento.urlImagen || ""
+                )) || null,
+              textFont:
+                frontAngle?.elemento?.propiedadesElemento?.fontFamily ??
+                "Arial",
+              textColor:
+                colors.find(
+                  (color) =>
+                    color.value ===
+                    frontAngle?.elemento?.propiedadesElemento?.color
+                )?.id ?? "white",
+              textSize:
+                frontAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX:
+                frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY:
+                frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX:
+                frontAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY:
+                frontAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth:
+                frontAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,
+              imageHeight:
+                frontAngle?.elemento?.propiedadesDiseno?.altura ?? 250,
             });
           }
-          
+
           if (backAngle) {
-            setValue('back', {
-              thumbnail: frontAngle?.thumbnailUrl ?? '',
-              text: backAngle?.elemento?.propiedadesElemento?.contenido ?? '',
-              image: backAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
-              textFont: backAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: colors.find((color) => color.value === backAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
-              textSize: backAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
-              textPositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              textPositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imagePositionX: backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              imagePositionY: backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: backAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
-              imageHeight: backAngle?.elemento?.propiedadesDiseno?.altura ?? 250
+            setValue("back", {
+              thumbnail: frontAngle?.thumbnailUrl ?? "",
+              text: backAngle?.elemento?.propiedadesElemento?.contenido ?? "",
+              image:
+                backAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont:
+                backAngle?.elemento?.propiedadesElemento?.fontFamily ?? "Arial",
+              textColor:
+                colors.find(
+                  (color) =>
+                    color.value ===
+                    backAngle?.elemento?.propiedadesElemento?.color
+                )?.id ?? "white",
+              textSize:
+                backAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX:
+                backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY:
+                backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX:
+                backAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY:
+                backAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth:
+                backAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,
+              imageHeight:
+                backAngle?.elemento?.propiedadesDiseno?.altura ?? 250,
             });
           }
-          
+
           if (leftAngle) {
-            setValue('left', {
-              thumbnail: leftAngle?.thumbnailUrl ?? '',
-              text: leftAngle?.elemento?.propiedadesElemento?.contenido ?? '',
-              image: leftAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
-              textFont: leftAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: colors.find((color) => color.value === leftAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
-              textSize: leftAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
-              textPositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              textPositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imagePositionX: leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              imagePositionY: leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: leftAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
-              imageHeight: leftAngle?.elemento?.propiedadesDiseno?.altura ?? 250
+            setValue("left", {
+              thumbnail: leftAngle?.thumbnailUrl ?? "",
+              text: leftAngle?.elemento?.propiedadesElemento?.contenido ?? "",
+              image:
+                leftAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont:
+                leftAngle?.elemento?.propiedadesElemento?.fontFamily ?? "Arial",
+              textColor:
+                colors.find(
+                  (color) =>
+                    color.value ===
+                    leftAngle?.elemento?.propiedadesElemento?.color
+                )?.id ?? "white",
+              textSize:
+                leftAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX:
+                leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY:
+                leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX:
+                leftAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY:
+                leftAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth:
+                leftAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,
+              imageHeight:
+                leftAngle?.elemento?.propiedadesDiseno?.altura ?? 250,
             });
           }
-          
+
           if (rightAngle) {
-            setValue('right', {
-              thumbnail: rightAngle?.thumbnailUrl ?? '',
-              text: rightAngle?.elemento?.propiedadesElemento?.contenido ?? '',
-              image: rightAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
-              textFont: rightAngle?.elemento?.propiedadesElemento?.fontFamily ?? 'Arial',
-              textColor: colors.find((color) => color.value === rightAngle?.elemento?.propiedadesElemento?.color)?.id ?? 'white',
-              textSize: rightAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
-              textPositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              textPositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imagePositionX: rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
-              imagePositionY: rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
-              imageWidth: rightAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,    
-              imageHeight: rightAngle?.elemento?.propiedadesDiseno?.altura ?? 250
+            setValue("right", {
+              thumbnail: rightAngle?.thumbnailUrl ?? "",
+              text: rightAngle?.elemento?.propiedadesElemento?.contenido ?? "",
+              image:
+                rightAngle?.elemento?.propiedadesElemento?.urlImagen ?? null,
+              textFont:
+                rightAngle?.elemento?.propiedadesElemento?.fontFamily ??
+                "Arial",
+              textColor:
+                colors.find(
+                  (color) =>
+                    color.value ===
+                    rightAngle?.elemento?.propiedadesElemento?.color
+                )?.id ?? "white",
+              textSize:
+                rightAngle?.elemento?.propiedadesElemento?.fontSize ?? 30,
+              textPositionX:
+                rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              textPositionY:
+                rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imagePositionX:
+                rightAngle?.elemento?.propiedadesDiseno?.posicionX ?? 250,
+              imagePositionY:
+                rightAngle?.elemento?.propiedadesDiseno?.posicionY ?? 250,
+              imageWidth:
+                rightAngle?.elemento?.propiedadesDiseno?.anchura ?? 250,
+              imageHeight:
+                rightAngle?.elemento?.propiedadesDiseno?.altura ?? 250,
             });
           }
-          
-          toast.success(`Producto "${loadedProduct.nombre}" cargado para edición`);
+
+          toast.success(
+            `Producto "${loadedProduct.nombre}" cargado para edición`
+          );
         } else {
-          toast.error('No se encontró el producto solicitado');
+          toast.error("No se encontró el producto solicitado");
         }
-    }
-  }
+      }
+    };
     onLoadProduct();
-  }, [productId, isAdmin, colors, setValue]); 
-  
+  }, [productId, isAdmin, colors, setValue]);
+
   if (!isMounted) {
     return (
       <div className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className={`text-4xl md:text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+            <h1
+              className={`text-4xl md:text-5xl font-bold ${
+                isDarkMode ? "text-white" : "text-gray-800"
+              } mb-4`}
+            >
               Personaliza tu Polera
             </h1>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
+            <p
+              className={`text-lg ${
+                isDarkMode ? "text-gray-300" : "text-gray-600"
+              } max-w-3xl mx-auto`}
+            >
               Cargando opciones de personalización...
             </p>
           </div>
@@ -1078,26 +1243,37 @@ const CustomizeHTML = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Título y descripción */}
         <div className="text-center mb-12">
-          <Text variant="h1" className={`text-4xl md:text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+          <Text
+            variant="h1"
+            className={`text-4xl md:text-5xl font-bold ${
+              isDarkMode ? "text-white" : "text-gray-800"
+            } mb-4`}
+          >
             Personaliza tu Polera
           </Text>
-          <Text variant="body" className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
-            Crea una polera única con tu diseño personalizado. Elige el color, añade texto o sube una imagen.
+          <Text
+            variant="body"
+            className={`text-lg ${
+              isDarkMode ? "text-gray-300" : "text-gray-600"
+            } max-w-3xl mx-auto`}
+          >
+            Crea una polera única con tu diseño personalizado. Elige el color,
+            añade texto o sube una imagen.
           </Text>
         </div>
-        
+
         <FormProvider {...methods}>
-          <form 
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8" 
+          <form
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
             onSubmit={(e) => {
               e.preventDefault();
-              console.log('Formulario enviado');
+              console.log("Formulario enviado");
               handleFormSubmit();
             }}
           >
@@ -1105,34 +1281,49 @@ const CustomizeHTML = () => {
             <div className="order-2 lg:order-1">
               <Card className="p-6 border rounded-xl shadow-lg">
                 <div className="rounded-xl overflow-hidden mb-6">
-                  <Text variant="h2" className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+                  <Text
+                    variant="h2"
+                    className={`text-2xl font-bold ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-4`}
+                  >
                     Previsualización
                   </Text>
-                
-                  <div ref={previewRef} className="relative aspect-[3/4] w-full max-w-xl mx-auto mb-6 rounded-lg overflow-hidden shadow-lg border border-gray-200">
+
+                  <div
+                    ref={previewRef}
+                    className="relative aspect-[3/4] w-full max-w-xl mx-auto mb-6 rounded-lg overflow-hidden shadow-lg border border-gray-200"
+                  >
                     {/* Selector de vistas */}
                     <div className="flex justify-center space-x-2 my-4">
                       {tshirtViews.map((view) => (
                         <button
                           key={view.id}
                           type="button"
-                          className={getViewButtonClass(formValues.view === view.id)}
-                          onClick={() => setValue('view', view.id as 'front' | 'back' | 'left' | 'right')}
+                          className={getViewButtonClass(
+                            formValues.view === view.id
+                          )}
+                          onClick={() =>
+                            setValue(
+                              "view",
+                              view.id as "front" | "back" | "left" | "right"
+                            )
+                          }
                         >
                           {view.label}
                         </button>
                       ))}
                     </div>
-                    
+
                     {/* Canvas para la personalización */}
-                    {formValues.view === 'front' && (
+                    {formValues.view === "front" && (
                       <HTMLCanvasV2
                         ref={frontCanvasRef}
                         tshirtImage={getTshirtImagePath()}
                         tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== 'white'}
+                        useColorization={formValues.color !== "white"}
                         customImage={currentViewData.image}
-                        customText={currentViewData.text || ''}
+                        customText={currentViewData.text || ""}
                         textColor={currentViewData.textColor}
                         textFont={selectedFont}
                         textSize={currentViewData.textSize}
@@ -1148,14 +1339,14 @@ const CustomizeHTML = () => {
                         onUpdateImageSize={handleUpdateImageSize}
                       />
                     )}
-                    {formValues.view === 'back' && (
+                    {formValues.view === "back" && (
                       <HTMLCanvasV2
                         ref={backCanvasRef}
                         tshirtImage={getTshirtImagePath()}
                         tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== 'white'}
+                        useColorization={formValues.color !== "white"}
                         customImage={currentViewData.image}
-                        customText={currentViewData.text || ''}
+                        customText={currentViewData.text || ""}
                         textColor={currentViewData.textColor}
                         textFont={selectedFont}
                         textSize={currentViewData.textSize}
@@ -1171,14 +1362,14 @@ const CustomizeHTML = () => {
                         onUpdateImageSize={handleUpdateImageSize}
                       />
                     )}
-                    {formValues.view === 'left' && (
+                    {formValues.view === "left" && (
                       <HTMLCanvasV2
                         ref={leftCanvasRef}
                         tshirtImage={getTshirtImagePath()}
                         tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== 'white'}
+                        useColorization={formValues.color !== "white"}
                         customImage={currentViewData.image}
-                        customText={currentViewData.text || ''}
+                        customText={currentViewData.text || ""}
                         textColor={currentViewData.textColor}
                         textFont={selectedFont}
                         textSize={currentViewData.textSize}
@@ -1194,14 +1385,14 @@ const CustomizeHTML = () => {
                         onUpdateImageSize={handleUpdateImageSize}
                       />
                     )}
-                    {formValues.view === 'right' && (
+                    {formValues.view === "right" && (
                       <HTMLCanvasV2
                         ref={rightCanvasRef}
                         tshirtImage={getTshirtImagePath()}
                         tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== 'white'}
+                        useColorization={formValues.color !== "white"}
                         customImage={currentViewData.image}
-                        customText={currentViewData.text || ''}
+                        customText={currentViewData.text || ""}
                         textColor={currentViewData.textColor}
                         textFont={selectedFont}
                         textSize={currentViewData.textSize}
@@ -1218,20 +1409,30 @@ const CustomizeHTML = () => {
                       />
                     )}
                   </div>
-                  
+
                   {/* Precio y botón de añadir al carrito (solo para usuarios normales) */}
                   <div className="flex flex-col sm:flex-row justify-between items-center">
                     <div className="mb-4 sm:mb-0">
-                      <Text variant="h3" className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      <Text
+                        variant="h3"
+                        className={`text-xl font-bold ${
+                          isDarkMode ? "text-white" : "text-gray-800"
+                        }`}
+                      >
                         Precio Total: {formatPrice(totalPrice)}
                       </Text>
-                      <Text variant="body" className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <Text
+                        variant="body"
+                        className={`text-sm ${
+                          isDarkMode ? "text-gray-400" : "text-gray-600"
+                        }`}
+                      >
                         Incluye personalización y envío
                       </Text>
                     </div>
                     {!isAdmin && (
-                      <Button 
-                        variant="primary" 
+                      <Button
+                        variant="primary"
                         size="lg"
                         onClick={handleAddToCart}
                       >
@@ -1242,13 +1443,18 @@ const CustomizeHTML = () => {
                 </div>
               </Card>
             </div>
-            
+
             {/* Opciones de personalización */}
             <div ref={optionsRef} className="order-1 lg:order-2">
               <Card className="p-6 border rounded-xl shadow-lg">
                 {/* Selección de color */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
                     Color de la Polera
                   </Text>
                   <div className="flex flex-wrap gap-2">
@@ -1257,21 +1463,26 @@ const CustomizeHTML = () => {
                         key={option.id}
                         type="button"
                         className={`w-10 h-10 rounded-full border-2 ${
-                          formValues.color === option.id 
-                            ? 'border-blue-600 ring-2 ring-blue-300' 
-                            : 'border-gray-300'
+                          formValues.color === option.id
+                            ? "border-blue-600 ring-2 ring-blue-300"
+                            : "border-gray-300"
                         }`}
                         style={{ backgroundColor: option.value }}
-                        onClick={() => setValue('color', option.id)}
+                        onClick={() => setValue("color", option.id)}
                         aria-label={`Color ${option.label}`}
                       />
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Selección de talla */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
                     Talla
                   </Text>
                   <div className="flex flex-wrap gap-2">
@@ -1279,27 +1490,41 @@ const CustomizeHTML = () => {
                       <button
                         key={option.id}
                         type="button"
-                        className={getSizeButtonClass(formValues.size === option.id)}
-                        onClick={() => setValue('size', option.id)}
+                        className={getSizeButtonClass(
+                          formValues.size === option.id
+                        )}
+                        onClick={() => setValue("size", option.id)}
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Texto personalizado para la vista actual */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
-                    Texto Personalizado ({tshirtViews.find(v => v.id === currentView)?.label})
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
+                    Texto Personalizado (
+                    {tshirtViews.find((v) => v.id === currentView)?.label})
                   </Text>
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="Escribe tu texto personalizado"
-                      className={`w-full p-3 rounded-md border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'}`}
-                      value={currentViewData.text || ''}
-                      onChange={(e) => setValue(`${currentView}.text`, e.target.value)}
+                      className={`w-full p-3 rounded-md border ${
+                        isDarkMode
+                          ? "bg-gray-800 border-gray-700 text-white"
+                          : "bg-white border-gray-300 text-gray-800"
+                      }`}
+                      value={currentViewData.text || ""}
+                      onChange={(e) =>
+                        setValue(`${currentView}.text`, e.target.value)
+                      }
                       disabled={!!currentViewData.image}
                     />
                     {currentViewData.image && (
@@ -1311,54 +1536,84 @@ const CustomizeHTML = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Selección de fuente para la vista actual */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
-                    Fuente del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
+                    Fuente del Texto (
+                    {tshirtViews.find((v) => v.id === currentView)?.label})
                   </Text>
                   <div className="flex flex-wrap gap-2">
                     {fonts.map((option) => (
                       <button
                         key={option.id}
                         type="button"
-                        className={getFontButtonClass(currentViewData.textFont === option.value)}
-                        onClick={() => setValue(`${currentView}.textFont`, option.value)}
-                        disabled={!!currentViewData.image || !currentViewData.text}
+                        className={getFontButtonClass(
+                          currentViewData.textFont === option.value
+                        )}
+                        onClick={() =>
+                          setValue(`${currentView}.textFont`, option.value)
+                        }
+                        disabled={
+                          !!currentViewData.image || !currentViewData.text
+                        }
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Selección de color del texto para la vista actual */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
-                    Color del Texto ({tshirtViews.find(v => v.id === currentView)?.label})
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
+                    Color del Texto (
+                    {tshirtViews.find((v) => v.id === currentView)?.label})
                   </Text>
                   <div className="flex flex-wrap gap-2">
-                    {colors.filter(color => textColorOptions.includes(color.id)).map((color) => (
-                      <button
-                        key={color.id}
-                        type="button"
-                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
-                        style={{ backgroundColor: color.value }}
-                        onClick={() => setValue(`${currentView}.textColor`, color.id)}
-                        disabled={!!currentViewData.image || !currentViewData.text}
-                      >
-                        {currentViewData.textColor === color.id && (
-                          <span className="text-white text-xs">✓</span>
-                        )}
-                      </button>
-                    ))}
+                    {colors
+                      .filter((color) => textColorOptions.includes(color.id))
+                      .map((color) => (
+                        <button
+                          key={color.id}
+                          type="button"
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                          style={{ backgroundColor: color.value }}
+                          onClick={() =>
+                            setValue(`${currentView}.textColor`, color.id)
+                          }
+                          disabled={
+                            !!currentViewData.image || !currentViewData.text
+                          }
+                        >
+                          {currentViewData.textColor === color.id && (
+                            <span className="text-white text-xs">✓</span>
+                          )}
+                        </button>
+                      ))}
                   </div>
                 </div>
-                
+
                 {/* Subida de imagen para la vista actual */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
-                    Imagen Personalizada ({tshirtViews.find(v => v.id === currentView)?.label})
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
+                    Imagen Personalizada (
+                    {tshirtViews.find((v) => v.id === currentView)?.label})
                   </Text>
                   {!currentViewData.image ? (
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md p-6 text-center">
@@ -1372,12 +1627,19 @@ const CustomizeHTML = () => {
                       />
                       <label
                         htmlFor="image-upload"
-                        className={`cursor-pointer inline-block px-4 py-2 rounded-md bg-blue-600 text-white ${currentViewData.text ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`cursor-pointer inline-block px-4 py-2 rounded-md bg-blue-600 text-white ${
+                          currentViewData.text
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
                       >
                         Subir Imagen
                       </label>
                       {currentViewData.text && (
-                        <Text variant="body" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Text
+                          variant="body"
+                          className="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                        >
                           Elimina el texto para subir una imagen
                         </Text>
                       )}
@@ -1398,13 +1660,26 @@ const CustomizeHTML = () => {
                             className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1"
                             onClick={handleRemoveImage}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           </button>
                           <div className="mt-2 p-2 text-center bg-gray-100 dark:bg-gray-800">
-                            <Text variant="body" className="text-sm text-gray-600 dark:text-gray-300">
-                              Puedes arrastrar y redimensionar la imagen en la previsualización
+                            <Text
+                              variant="body"
+                              className="text-sm text-gray-600 dark:text-gray-300"
+                            >
+                              Puedes arrastrar y redimensionar la imagen en la
+                              previsualización
                             </Text>
                           </div>
                         </>
@@ -1412,19 +1687,28 @@ const CustomizeHTML = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Detalles adicionales */}
                 <div className="mb-6">
-                  <Text variant="body" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                  <Text
+                    variant="body"
+                    className={`font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-800"
+                    } mb-2`}
+                  >
                     Detalles Adicionales
                   </Text>
                   <textarea
-                    className={`w-full p-3 rounded-md border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'} min-h-[100px]`}
+                    className={`w-full p-3 rounded-md border ${
+                      isDarkMode
+                        ? "bg-gray-800 border-gray-700 text-white"
+                        : "bg-white border-gray-300 text-gray-800"
+                    } min-h-[100px]`}
                     placeholder="Añade cualquier detalle adicional sobre tu pedido"
-                    {...register('details')}
+                    {...register("details")}
                   />
                 </div>
-                
+
                 {/* Botón de Agregar al Carrito (solo para usuarios normales) */}
                 {!isAdmin && (
                   <div className="mt-8">
@@ -1432,38 +1716,76 @@ const CustomizeHTML = () => {
                       type="submit"
                       className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-2"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                       </svg>
                       Agregar al Carrito
                     </button>
                   </div>
                 )}
-                
+
                 {/* Opciones de administrador */}
                 {isAdmin && (
                   <div className="mt-8">
-                    <div className={`p-6 rounded-xl shadow-lg border ${isDarkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}>
-                      <div className={`flex items-center mb-4 pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+                    <div
+                      className={`p-6 rounded-xl shadow-lg border ${
+                        isDarkMode
+                          ? "bg-gray-800 text-white border-gray-700"
+                          : "bg-white text-gray-800 border-gray-200"
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center mb-4 pb-3 border-b ${
+                          isDarkMode ? "border-gray-700" : "border-gray-200"
+                        }`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 mr-2 text-blue-600"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                            clipRule="evenodd"
+                          />
                         </svg>
-                        <Text variant="h3" className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        <Text
+                          variant="h3"
+                          className={`font-bold text-lg ${
+                            isDarkMode ? "text-white" : "text-gray-800"
+                          }`}
+                        >
                           Opciones de Administrador
                         </Text>
                       </div>
                       <AdminProductForm productId={productId ?? undefined} />
-                      
+
                       {/* Botón de Crear/Actualizar Producto */}
                       <div className="mt-6">
                         <button
                           type="submit"
                           className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-md transition-colors duration-200 flex items-center justify-center"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5 mr-2"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                              clipRule="evenodd"
+                            />
                           </svg>
-                          {productId ? 'Actualizar Producto' : 'Crear Producto'}
+                          {productId ? "Actualizar Producto" : "Crear Producto"}
                         </button>
                       </div>
                     </div>
@@ -1477,7 +1799,5 @@ const CustomizeHTML = () => {
     </div>
   );
 };
-
-
 
 export default CustomizeHTML;

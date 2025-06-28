@@ -1,81 +1,62 @@
-// Tipos para el sistema de pedidos
+import { DisenoPersonalizadoDTO } from "./personalizedDesign";
 
-import { CartItemType } from './cart';
-
-// Estado del pedido
-export enum OrderStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELLED = 'cancelled'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface Root {
+  id: number;
+  usuarioId: number;
+  nombreUsuario: string;
+  creadaEn: number[];
+  total: number;
+  estado: string;
+  direccionEntrega: string;
+  metodoPago: string;
+  items: Item[];
 }
 
-// Información de envío
-export interface ShippingInfo {
-  fullName: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  phone: string;
-  email: string;
+export interface Item {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  colorNombre: string;
+  tallaNombre: string;
+  tipoItem: string;
+  productoId?: number;
+  producto?: Producto;
+  disenoPersonalizadoId?: number;
+  disenoPersonalizado?: DisenoPersonalizadoDTO;
+  thumbnails: Thumbnail[];
 }
 
-// Información de pago
-export interface PaymentInfo {
-  method: 'credit_card' | 'debit_card' | 'paypal' | 'transfer';
-  cardNumber?: string; // Solo los últimos 4 dígitos para referencia
-  cardHolder?: string;
-  transactionId?: string;
+export interface Producto {
+  id: number;
+  disenoPersonalizado: DisenoPersonalizadoDTO;
+  nombre: string;
+  descripcion: string;
+  categoriaId: number;
+  categoriaNombre: string;
+  activo: number;
+  creadoEn: number[];
+  actualizadoEn: number[];
 }
 
-// Entrada en el historial de estados
-export interface StatusHistoryEntry {
-  status: OrderStatus;
-  date: Date;
-  note?: string;
+export interface Thumbnail {
+  id: number;
+  itemCarritoId: any;
+  itemOrdenId: number;
+  tipoAnguloId: number;
+  nombreAngulo: string;
+  url: string;
+  cloudinaryResource: CloudinaryResource;
 }
 
-// Item en una orden con snapshot de datos
-export interface OrderItem {
-  id: string;
-  type: CartItemType;
-  productId?: string;     // ID del producto (si es tipo PRODUCT)
-  designId?: string;      // ID del diseño personalizado (si es tipo CUSTOM)
-  
-  // Snapshot de datos al momento de la compra para referencia histórica
-  snapshot: {
-    name: string;
-    color: string;
-    size: string;
-    imageUrl: string;     // URL de la imagen representativa
-  };
-  
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  price: number;          // Para compatibilidad con código existente
-  product?: { id: string; name: string; color?: string; size?: string; images?: string[]; price?: number; };  // Versión simplificada para compatibilidad
-  design?: { id: string; name?: string; color?: string; size?: string; front?: unknown; }; // Versión simplificada para compatibilidad
-}
-
-// Pedido completo
-export interface Order {
-  id: string;
-  userId?: string;        // Opcional, si el usuario no está autenticado
-  userEmail: string;      // Email del usuario, autenticado o no
-  items: OrderItem[];
-  shippingInfo: ShippingInfo;
-  paymentInfo: PaymentInfo;
-  status: OrderStatus;
-  statusHistory: StatusHistoryEntry[];
-  subtotal: number;       // Subtotal antes de impuestos y envío
-  shipping: number;       // Costo de envío
-  discount: number;       // Descuento aplicado
-  total: number;          // Total final
-  createdAt: Date;
-  updatedAt: Date;
-  trackingToken: string;  // Token único para seguimiento de pedidos no autenticados
+export interface CloudinaryResource {
+  id: number;
+  publicId: string;
+  urlImagen: string;
+  anchura: any;
+  altura: any;
+  formato: any;
+  tamañoBytes: any;
 }

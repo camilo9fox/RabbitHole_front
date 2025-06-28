@@ -1,4 +1,68 @@
-// Tipos para el sistema de carrito de compras
+import { Thumbnail } from "./order";
+import { DisenoPersonalizadoDTO } from "./personalizedDesign";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Cart persistente
+export interface UserCart {
+  id: number;
+  usuarioId: number;
+  nombreUsuario: string;
+  creadoEn: number[];
+  actualizadoEn: number[];
+  items: Item[];
+  cantidadTotal: number;
+  subtotal: number;
+}
+
+export interface Item {
+  id: number;
+  carritoId: number;
+  productoId?: number;
+  productoNombre?: string;
+  producto?: Producto;
+  disenoPersonalizadoId?: number;
+  disenoPersonalizado?: DisenoPersonalizadoDTO;
+  colorId: string;
+  color?: Color;
+  tallaId: string;
+  talla?: Talla;
+  tipoId?: number;
+  tipoNombre?: string;
+  tipo?: any;
+  cantidad: number;
+  precioUnitario: number;
+  fechaCreacion: any;
+  ultimaActualizacion: any;
+  thumbnails: Thumbnail[];
+  subtotal: number;
+}
+
+export interface Producto {
+  id: number;
+  disenoPersonalizado: DisenoPersonalizadoDTO;
+  nombre: string;
+  descripcion: string;
+  categoriaId: number;
+  categoriaNombre: string;
+  activo: number;
+  creadoEn: number[];
+  actualizadoEn: number[];
+}
+
+export interface Color {
+  id: string;
+  nombre: string;
+  valorHex: string;
+}
+
+export interface Talla {
+  id: string;
+  nombre: string;
+  descripcion: any;
+}
+
+// Cart en memoria
 
 // Estado de aprobación para diseños personalizados
 export enum CustomDesignStatus {
@@ -12,7 +76,7 @@ export enum CustomDesignStatus {
 export interface CustomView {
   text: string;
   image: string | null; // Base64 de la imagen
-  textFont: string;
+  textFont: string | number;
   textColor: string;
   textSize: number;
   textPositionX: number;
@@ -71,9 +135,9 @@ export enum CartItemType {
 
 // Item en el carrito (producto del catálogo)
 export interface ProductCartItem {
-  id: string; // ID único para este item de carrito
+  id: string | number; // ID único para este item de carrito
   type: CartItemType.PRODUCT | CartItemType.STANDARD; // Soporta ambos tipos para compatibilidad
-  productId: string; // Referencia al producto
+  productId: string | number; // Referencia al producto
   color: string; // Color seleccionado
   size: string; // Talla seleccionada
   quantity: number;

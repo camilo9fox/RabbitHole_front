@@ -51,6 +51,7 @@ export default function SettingsPage() {
   }, [session, status, router]);
 
   // Guardar cambios en preferencias
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const savePreferences = (newPrefs: any) => {
     try {
       localStorage.setItem('userPreferences', JSON.stringify(newPrefs));
