@@ -26,11 +26,13 @@ import {
   createOrderAnonymous,
   InfoEnvio,
   InfoPago,
-  Item,
 } from "@/services/orderService";
 import { DisenoPersonalizadoDTO } from "@/types/personalizedDesign";
 import { createPersonalizedDesign } from "@/services/diseñoPersonalizadoService";
 import { addThumbnailOrderItem } from "@/services/thumbnailService";
+import Modal from "../commons/organisms/Modal";
+import Loader from "../commons/atoms/Loader";
+import Text from "../commons/atoms/Text";
 
 // Componentes de formulario
 // Componente input con manejo de temas oscuro/claro
@@ -76,10 +78,14 @@ const CheckoutPage: React.FC = () => {
   const isDarkMode = resolvedTheme === "dark";
   const [step, setStep] = useState(1);
   const [orderId, setOrderId] = useState<string | null>(null);
-
+  const [isClient, setIsClient] = useState(false);
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<
+    "loading" | "success" | "error"
+  >("loading");
   // Log the current theme for debugging and verificar que CartItemType está disponible
   useEffect(() => {
     console.log("Current theme in CheckoutPage:", resolvedTheme);
@@ -88,6 +94,17 @@ const CheckoutPage: React.FC = () => {
       custom: CartItemType.CUSTOM,
     });
   }, [resolvedTheme]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsClient(true);
+    }
+  }, []);
+
+  const onCloseModal = () => {
+    setModalOpen(false);
+    setOrderStatus("loading");
+  };
 
   // Función auxiliar para obtener las clases del círculo de paso
   const getStepCircleClasses = (stepNumber: number): string => {
@@ -154,7 +171,8 @@ const CheckoutPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep(step + 1);
+    setModalOpen(true);
+    setOrderStatus("loading");
     // Procesar el pago y finalizar la compra
     console.log("Procesando compra:", { cart, formData });
 
@@ -172,7 +190,7 @@ const CheckoutPage: React.FC = () => {
 
     const paymentInfo: InfoPago = {
       metodoPagoId: formData.paymentMethod === "credit_card" ? 1 : 2,
-      ultimosDigitos: formData.cardNumber,
+      ultimosDigitos: formData.cardNumber.slice(-4),
       titularTarjeta: formData.cardName,
       idTransaccion: `TR-${Date.now()}`,
     };
@@ -227,7 +245,9 @@ const CheckoutPage: React.FC = () => {
         }
         setOrderId(order.id);
       }
-
+      setModalOpen(false);
+      setOrderStatus("success");
+      setStep(step + 1);
       // Limpiar el carrito después de completar la compra
       clearCart();
     } catch (error) {
@@ -235,6 +255,7 @@ const CheckoutPage: React.FC = () => {
       alert(
         "Hubo un problema al procesar tu pedido. Por favor, intenta nuevamente."
       );
+      setOrderStatus("error");
     }
   };
 
@@ -964,100 +985,125 @@ const CheckoutPage: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <h1
-          className={`text-2xl font-bold ${
-            isDarkMode ? "text-white" : "text-gray-900"
-          }`}
-        >
-          Checkout
-        </h1>
-      </div>
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center w-full">
-            <div className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
-                  1
-                )}`}
-              >
-                1
-              </div>
-              <div
-                className={`ml-2 text-sm font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                }`}
-              >
-                Envío
-              </div>
-            </div>
-            <div
-              className={`flex-1 mx-4 h-0.5 ${
-                isDarkMode ? "bg-gray-700" : "bg-gray-200"
-              }`}
-            ></div>
-            <div className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
-                  2
-                )}`}
-              >
-                2
-              </div>
-              <div
-                className={`ml-2 text-sm font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                }`}
-              >
-                Pago
-              </div>
-            </div>
-            <div
-              className={`flex-1 mx-4 h-0.5 ${
-                isDarkMode ? "bg-gray-700" : "bg-gray-200"
-              }`}
-            ></div>
-            <div className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
-                  3
-                )}`}
-              >
-                3
-              </div>
-              <div
-                className={`ml-2 text-sm font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                }`}
-              >
-                Confirmación
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Contenido principal */}
-        <div className="mt-12 mb-8">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div
-              className={`lg:col-span-2 rounded-lg p-6 shadow-sm ${
-                isDarkMode ? "bg-gray-800" : "bg-white"
+    isClient && (
+      <>
+        <div className="container mx-auto px-4 py-8 min-h-screen">
+          <div className="flex justify-between items-center mb-8">
+            <h1
+              className={`text-2xl font-bold ${
+                isDarkMode ? "text-white" : "text-gray-900"
               }`}
             >
-              {step === 1 && renderShippingInfo()}
-              {step === 2 && renderPaymentInfo()}
-              {step === 3 && renderConfirmation()}
+              Checkout
+            </h1>
+          </div>
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center w-full">
+                <div className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
+                      1
+                    )}`}
+                  >
+                    1
+                  </div>
+                  <div
+                    className={`ml-2 text-sm font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    Envío
+                  </div>
+                </div>
+                <div
+                  className={`flex-1 mx-4 h-0.5 ${
+                    isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                  }`}
+                ></div>
+                <div className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
+                      2
+                    )}`}
+                  >
+                    2
+                  </div>
+                  <div
+                    className={`ml-2 text-sm font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    Pago
+                  </div>
+                </div>
+                <div
+                  className={`flex-1 mx-4 h-0.5 ${
+                    isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                  }`}
+                ></div>
+                <div className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full ${getStepCircleClasses(
+                      3
+                    )}`}
+                  >
+                    3
+                  </div>
+                  <div
+                    className={`ml-2 text-sm font-medium ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    Confirmación
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-1 self-start sticky top-24 z-10">
-              {renderCartSummary()}
+            {/* Contenido principal */}
+            <div className="mt-12 mb-8">
+              <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div
+                  className={`lg:col-span-2 rounded-lg p-6 shadow-sm ${
+                    isDarkMode ? "bg-gray-800" : "bg-white"
+                  }`}
+                >
+                  {step === 1 && renderShippingInfo()}
+                  {step === 2 && renderPaymentInfo()}
+                  {step === 3 && renderConfirmation()}
+                </div>
+
+                <div className="lg:col-span-1 self-start sticky top-24 z-10">
+                  {renderCartSummary()}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+        <Modal
+          isOpen={modalOpen}
+          onClose={onCloseModal}
+          title="Confirmación de Pedido"
+          size="lg"
+          showCloseButton={orderStatus === "error" ? true : false}
+          closeOnClickOutside={orderStatus === "error" ? true : false}
+          closeOnEsc={orderStatus === "error" ? true : false}
+        >
+          <div className="flex items-center justify-center">
+            {orderStatus === "loading" ? (
+              <Loader />
+            ) : orderStatus === "error" ? (
+              <Text>
+                Hubo un error al crear el pedido, intentalo de nuevo mas tarde
+              </Text>
+            ) : (
+              <Text>El pedido se creo correctamente</Text>
+            )}
+          </div>
+        </Modal>
+      </>
+    )
   );
 };
 

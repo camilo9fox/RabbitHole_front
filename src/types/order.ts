@@ -1,16 +1,45 @@
 import { DisenoPersonalizadoDTO } from "./personalizedDesign";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface Root {
+
+export enum OrderStatus {
+  PENDING = "PENDIENTE",
+  PROCESSING = "EN_PROCESO",
+  SHIPPED = "ENVIADO",
+  DELIVERED = "ENTREGADO",
+  CANCELLED = "CANCELADO",
+}
+export interface Order {
   id: number;
-  usuarioId: number;
+  usuarioId: any;
   nombreUsuario: string;
   creadaEn: number[];
   total: number;
   estado: string;
   direccionEntrega: string;
   metodoPago: string;
+  infoEnvio: InfoEnvio;
+  infoPago: InfoPago;
   items: Item[];
+}
+
+export interface InfoEnvio {
+  nombreCompleto: string;
+  direccion: string;
+  ciudad: string;
+  estado: string;
+  codigoPostal: string;
+  pais: string;
+  telefono: string;
+  email: string;
+  nombre: string;
+}
+
+export interface InfoPago {
+  metodoPagoId: number;
+  ultimosDigitos: string;
+  titularTarjeta: string;
+  idTransaccion: string;
 }
 
 export interface Item {
@@ -39,6 +68,7 @@ export interface Producto {
   activo: number;
   creadoEn: number[];
   actualizadoEn: number[];
+  thumbnails?: Thumbnail[];
 }
 
 export interface Thumbnail {
