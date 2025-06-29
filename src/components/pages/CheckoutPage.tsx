@@ -33,6 +33,8 @@ import { addThumbnailOrderItem } from "@/services/thumbnailService";
 import Modal from "../commons/organisms/Modal";
 import Loader from "../commons/atoms/Loader";
 import Text from "../commons/atoms/Text";
+import axios from "axios";
+import { API_ROUTES } from "@/config/apiRoutes";
 
 // Componentes de formulario
 // Componente input con manejo de temas oscuro/claro
@@ -79,6 +81,7 @@ const CheckoutPage: React.FC = () => {
   const [step, setStep] = useState(1);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [userId, setUserId] = useState<number>(1);
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
 
@@ -100,6 +103,28 @@ const CheckoutPage: React.FC = () => {
       setIsClient(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (session?.profile?.oid) {
+      fetchUserId();
+    }
+  }, [session]);
+
+  const fetchUserId = async () => {
+    try {
+      const response = await axios.get(
+        API_ROUTES.users + "/oid/" + session!.profile!.oid,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+      setUserId(response.data.id);
+    } catch (error) {
+      console.error("Error al obtener ID del usuario:", error);
+    }
+  };
 
   const onCloseModal = () => {
     setModalOpen(false);
@@ -278,7 +303,7 @@ const CheckoutPage: React.FC = () => {
       let personalizedDesign;
       if (isCustomItem(item)) {
         const design = getDesignSafely(item)!;
-        personalizedDesign = convertCustomDesignToDTO(design);
+        personalizedDesign = convertCustomDesignToDTO(design, userId);
         hasCustomItems = true;
         return personalizedDesign;
       }

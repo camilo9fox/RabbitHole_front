@@ -123,10 +123,10 @@ export const convertCustomDesignToDTO = (
   };
 
   // Convertir ID de usuario a número
-  const numericUserId = 1;
-  // if (usuarioId) {
-  //   numericUserId = typeof usuarioId === "string" ? parseInt(usuarioId) : Number(usuarioId);
-  // }
+  let numericUserId = 1;
+  if (usuarioId) {
+    numericUserId = Number(usuarioId);
+  }
 
   // Extraer ID de un objeto o convertir a string
   const extractId = (value: unknown): string => {
