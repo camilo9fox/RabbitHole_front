@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { OrderStatus } from '@/types/order';
 
 interface OrderStatusBadgeProps {
-  status: OrderStatus;
+  status: OrderStatus | string;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -16,14 +16,19 @@ const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, size = 'md'
   const getStatusColor = () => {
     switch (status) {
       case OrderStatus.PENDING:
+      case "PENDIENTE":
         return isDarkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-100 text-yellow-800';
       case OrderStatus.PROCESSING:
+      case "EN_PROCESO":
         return isDarkMode ? 'bg-blue-800 text-blue-200' : 'bg-blue-100 text-blue-800';
       case OrderStatus.SHIPPED:
+      case "ENVIADO":
         return isDarkMode ? 'bg-purple-800 text-purple-200' : 'bg-purple-100 text-purple-800';
       case OrderStatus.DELIVERED:
+      case "ENTREGADO":
         return isDarkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-800';
       case OrderStatus.CANCELLED:
+      case "CANCELADO":
         return isDarkMode ? 'bg-red-800 text-red-200' : 'bg-red-100 text-red-800';
       default:
         return isDarkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800';
@@ -33,14 +38,19 @@ const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, size = 'md'
   const getStatusText = () => {
     switch (status) {
       case OrderStatus.PENDING:
+      case "PENDIENTE":
         return 'Pendiente';
       case OrderStatus.PROCESSING:
+      case "EN_PROCESO":
         return 'En proceso';
       case OrderStatus.SHIPPED:
+      case "ENVIADO":
         return 'Enviado';
       case OrderStatus.DELIVERED:
+      case "ENTREGADO":
         return 'Entregado';
       case OrderStatus.CANCELLED:
+      case "CANCELADO":
         return 'Cancelado';
       default:
         return status;

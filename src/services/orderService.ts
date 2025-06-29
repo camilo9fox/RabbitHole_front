@@ -92,3 +92,13 @@ export const updateOrderStatus = async (orderId: number, statusId: number) => {
     throw error;
   }
 };
+
+export const getOrderStates = async () => {
+  try {
+    const response = await axios.get(API_ROUTES.states + "-orden");
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener estados de orden:", error);
+    throw error;
+  }
+};

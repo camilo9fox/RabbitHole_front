@@ -11,4 +11,5 @@ export const API_ROUTES = {
   orders: `${API_BASE_URL}/ordenes`,
   cart: `${API_BASE_URL}/carritos`,
   thumbnails: `${API_BASE_URL}/thumbnails`,
+  states: `${API_BASE_URL}/estados`,
 };

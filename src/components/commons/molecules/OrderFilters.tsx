@@ -1,23 +1,26 @@
 "use client";
 
-import React from 'react';
-import { Search, Filter } from 'lucide-react';
-import { OrderStatus } from '@/types/order';
+import React from "react";
+import { Search, Filter } from "lucide-react";
+import { OrderStatus } from "@/types/order";
+import { OrderState } from "@/components/pages/AdminOrdersPage";
 
 interface OrderFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
-  statusFilter: OrderStatus | 'all';
-  setStatusFilter: (value: OrderStatus | 'all') => void;
+  statusFilter: OrderStatus | "all";
+  setStatusFilter: (value: OrderStatus | "all") => void;
   isDarkMode: boolean;
+  orderStates: OrderState[];
 }
 
-const OrderFilters: React.FC<OrderFiltersProps> = ({ 
-  searchTerm, 
-  setSearchTerm, 
-  statusFilter, 
-  setStatusFilter, 
-  isDarkMode 
+const OrderFilters: React.FC<OrderFiltersProps> = ({
+  searchTerm,
+  setSearchTerm,
+  statusFilter,
+  setStatusFilter,
+  isDarkMode,
+  orderStates,
 }) => {
   return (
     <div className="mb-6 flex flex-col md:flex-row gap-4">
@@ -29,34 +32,38 @@ const OrderFilters: React.FC<OrderFiltersProps> = ({
         <input
           type="text"
           className={`block w-full pl-10 pr-3 py-2 border rounded-lg ${
-            isDarkMode 
-              ? 'bg-gray-800 border-gray-700 text-white' 
-              : 'bg-white border-gray-300 text-gray-900'
+            isDarkMode
+              ? "bg-gray-800 border-gray-700 text-white"
+              : "bg-white border-gray-300 text-gray-900"
           }`}
           placeholder="Buscar por ID, nombre o email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      
+
       {/* Filtro de estado */}
       <div className="flex items-center">
         <Filter className="mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
         <select
           className={`block w-full p-2 border rounded-lg ${
-            isDarkMode 
-              ? 'bg-gray-800 border-gray-700 text-white' 
-              : 'bg-white border-gray-300 text-gray-900'
+            isDarkMode
+              ? "bg-gray-800 border-gray-700 text-white"
+              : "bg-white border-gray-300 text-gray-900"
           }`}
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'all')}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as OrderStatus | "all")
+          }
         >
           <option value="all">Todos los estados</option>
-          <option value={OrderStatus.PENDING}>Pendiente</option>
-          <option value={OrderStatus.PROCESSING}>En proceso</option>
-          <option value={OrderStatus.SHIPPED}>Enviado</option>
-          <option value={OrderStatus.DELIVERED}>Entregado</option>
-          <option value={OrderStatus.CANCELLED}>Cancelado</option>
+          {orderStates
+            .filter((state) => state.id !== 7)
+            .map((state) => (
+              <option key={state.id} value={state.codigo}>
+                {state.nombre}
+              </option>
+            ))}
         </select>
       </div>
     </div>

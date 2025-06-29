@@ -3,11 +3,12 @@ import { DisenoPersonalizadoDTO } from "./personalizedDesign";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export enum OrderStatus {
-  PENDING = "PENDIENTE",
-  PROCESSING = "EN_PROCESO",
-  SHIPPED = "ENVIADO",
-  DELIVERED = "ENTREGADO",
-  CANCELLED = "CANCELADO",
+  PENDING = "Pendiente",
+  PAID = "Pagada",
+  PROCESSING = "En Proceso",
+  SHIPPED = "Enviada",
+  DELIVERED = "Entregada",
+  CANCELLED = "Cancelada",
 }
 export interface Order {
   id: number;
