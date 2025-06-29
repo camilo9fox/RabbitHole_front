@@ -18,7 +18,7 @@ declare module "next-auth" {
       streetAddress?: string;
       family_name?: string;
       given_name?: string;
-    }
+    };
   }
 }
 
@@ -55,14 +55,19 @@ interface AzureB2CProfile extends Record<string, unknown> {
 }
 
 // Configuración de Azure B2C
-const AZURE_AD_B2C_TENANT_NAME = process.env.AZURE_AD_B2C_TENANT_NAME ?? "azurecnsum1";
+const AZURE_AD_B2C_TENANT_NAME =
+  process.env.AZURE_AD_B2C_TENANT_NAME ?? "azurecnsum1";
 const AZURE_AD_B2C_CLIENT_ID = process.env.AZURE_AD_B2C_CLIENT_ID ?? "";
 const AZURE_AD_B2C_CLIENT_SECRET = process.env.AZURE_AD_B2C_CLIENT_SECRET ?? "";
-const AZURE_AD_B2C_PRIMARY_USER_FLOW = process.env.AZURE_AD_B2C_PRIMARY_USER_FLOW ?? "B2C_1_signupsignin";
-const AZURE_AD_B2C_RESET_PASSWORD_FLOW = process.env.AZURE_AD_B2C_RESET_PASSWORD_FLOW ?? "B2C_1_passwordreset";
+const AZURE_AD_B2C_PRIMARY_USER_FLOW =
+  process.env.AZURE_AD_B2C_PRIMARY_USER_FLOW ?? "B2C_1_signupsignin";
+const AZURE_AD_B2C_RESET_PASSWORD_FLOW =
+  process.env.AZURE_AD_B2C_RESET_PASSWORD_FLOW ?? "B2C_1_passwordreset";
 
 // URL directa para el flujo de restablecimiento de contraseña
-const RESET_PASSWORD_URL = `https://${AZURE_AD_B2C_TENANT_NAME}.b2clogin.com/${AZURE_AD_B2C_TENANT_NAME}.onmicrosoft.com/${AZURE_AD_B2C_RESET_PASSWORD_FLOW}/oauth2/v2.0/authorize?client_id=${AZURE_AD_B2C_CLIENT_ID}&nonce=defaultNonce&redirect_uri=${encodeURIComponent(process.env.NEXTAUTH_URL ?? 'http://localhost:3000')}/api/auth/callback/azure-ad-reset&scope=openid&response_type=code&prompt=login`;
+const RESET_PASSWORD_URL = `https://${AZURE_AD_B2C_TENANT_NAME}.b2clogin.com/${AZURE_AD_B2C_TENANT_NAME}.onmicrosoft.com/${AZURE_AD_B2C_RESET_PASSWORD_FLOW}/oauth2/v2.0/authorize?client_id=${AZURE_AD_B2C_CLIENT_ID}&nonce=defaultNonce&redirect_uri=${encodeURIComponent(
+  process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+)}/api/auth/callback/azure-ad-reset&scope=openid&response_type=code&prompt=login`;
 
 // Configuración de NextAuth
 const authOptions: NextAuthOptions = {
@@ -84,8 +89,8 @@ const authOptions: NextAuthOptions = {
           response_mode: "query",
           ui_locales: "es",
           // Siempre forzar una nueva sesión para evitar inicios de sesión automáticos
-          prompt: "login"
-        }
+          prompt: "login",
+        },
       },
       idToken: true,
       checks: ["pkce", "state"],
@@ -110,7 +115,7 @@ const authOptions: NextAuthOptions = {
         url: RESET_PASSWORD_URL,
         params: {
           ui_locales: "es",
-        }
+        },
       },
       idToken: true,
       checks: ["pkce", "state"],
@@ -137,18 +142,18 @@ const authOptions: NextAuthOptions = {
       if (account && profile) {
         // Convertir el perfil a nuestro tipo personalizado
         const azureProfile = profile as unknown as AzureB2CProfile;
-        
+
         // Guardar el token de acceso (usando id_token ya que es lo que proporciona Azure B2C)
         token.accessToken = account.id_token ?? account.access_token;
         token.id = azureProfile.sub ?? azureProfile.oid;
-        
+
         // Guardar información adicional del perfil de Azure B2C
         if (azureProfile.emails && azureProfile.emails.length > 0) {
           token.email = azureProfile.emails[0];
         } else if (azureProfile.email) {
           token.email = azureProfile.email;
         }
-        
+
         // Guardar datos adicionales del perfil
         token.name = azureProfile.name ?? azureProfile.given_name;
         token.city = azureProfile.city;
@@ -157,7 +162,7 @@ const authOptions: NextAuthOptions = {
         token.streetAddress = azureProfile.streetAddress;
         token.family_name = azureProfile.family_name;
         token.given_name = azureProfile.given_name;
-        
+
         // Guardar el perfil completo para acceso a todos los datos
         token.profile = azureProfile as unknown as Record<string, unknown>;
       }
@@ -166,12 +171,12 @@ const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       // Send properties to the client, like an access_token and user id from a provider.
       session.accessToken = token.accessToken;
-      
+
       // Asegurar que el objeto user existe
       if (!session.user) {
         session.user = {};
       }
-      
+
       // Transferir datos del token a la sesión
       session.user.id = token.id;
       session.user.name = token.name;
@@ -182,10 +187,10 @@ const authOptions: NextAuthOptions = {
       session.user.streetAddress = token.streetAddress;
       session.user.family_name = token.family_name;
       session.user.given_name = token.given_name;
-      
+
       // Añadir el perfil completo a la sesión
       session.profile = token.profile;
-      
+
       return session;
     },
     async redirect({ url, baseUrl }) {
@@ -198,19 +203,19 @@ const authOptions: NextAuthOptions = {
     async signIn() {
       return true;
     },
-
   },
   pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
+    signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
   },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   debug: process.env.NODE_ENV === "development",
-  secret: process.env.NEXTAUTH_SECRET ?? "tu-secreto-secreto-que-debe-cambiarse",
+  secret:
+    process.env.NEXTAUTH_SECRET ?? "tu-secreto-secreto-que-debe-cambiarse",
 };
 
 const handler = NextAuth(authOptions);
