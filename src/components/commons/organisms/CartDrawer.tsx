@@ -11,11 +11,13 @@ import {
 } from "@/types/cart";
 import Image from "next/image";
 import Link from "next/link";
-import { X, Plus, Minus, Trash2 } from "lucide-react";
+import { X, Plus, Minus, Trash2, Loader } from "lucide-react";
 import gsap from "gsap";
 import { useTheme } from "next-themes";
 import { useProductData } from "@/context/ProductDataContext";
-
+import Modal from "./Modal";
+import Text from "../atoms/Text";
+import { FaCheckCircle } from "react-icons/fa";
 // Props para el componente CartDrawer
 interface CartDrawerProps {
   isOpen: boolean;
@@ -39,7 +41,7 @@ const VIEW_LABELS: Record<string, string> = {
 const ANGLES = ["frente", "espalda", "izquierda", "derecha"];
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const { cart, updateQuantity, removeItem } = useCart();
+  const { cart, updateQuantity, removeItem, persistentCart } = useCart();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +51,25 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
+  const [removalDone, setRemovalDone] = useState(false);
 
+  useEffect(() => {
+    // Cuando loading termina y la acción es removeItem, muestra feedback de éxito
+    if (
+      !persistentCart.loading &&
+      persistentCart.actualAction === "removeItem"
+    ) {
+      setRemovalDone(true);
+      // Cierra el modal después de 1.5 segundos
+      const timer = setTimeout(() => {
+        setRemovalDone(false);
+        persistentCart.setActualAction(""); // Limpia la acción
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    // Si vuelve a cargar, resetea
+    if (persistentCart.loading) setRemovalDone(false);
+  }, [persistentCart.loading, persistentCart.actualAction]);
   // Efecto para marcar cuando estamos en el cliente
   useEffect(() => {
     setMounted(true);
@@ -535,148 +555,191 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   if (!mounted) return null;
 
   return (
-    <div
-      className={`fixed inset-0 z-50 overflow-hidden ${
-        isOpen ? "pointer-events-auto" : "pointer-events-none"
-      }`}
-    >
-      {/* Overlay */}
-      <button
-        ref={overlayRef}
-        className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity ${
-          isOpen ? "opacity-50" : "opacity-0"
-        }`}
-        onClick={onClose}
-        aria-label="Cerrar carrito"
-      />
-
-      {/* Panel lateral */}
+    <>
       <div
-        ref={drawerRef}
-        className={`fixed inset-y-0 right-0 max-w-md w-full transform transition-transform ${
-          isDarkMode ? "bg-gray-900" : "bg-white"
-        } shadow-xl flex flex-col`}
-        style={{ transform: "translateX(100%)" }}
+        className={`fixed inset-0 z-50 overflow-hidden ${
+          isOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
       >
-        {/* Cabecera */}
-        <div
-          className={`flex items-center justify-between px-4 py-3 border-b ${
-            isDarkMode ? "border-gray-700" : "border-gray-200"
+        {/* Overlay */}
+        <button
+          ref={overlayRef}
+          className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity ${
+            isOpen ? "opacity-50" : "opacity-0"
           }`}
-        >
-          <h2
-            className={`text-lg font-semibold ${
-              isDarkMode ? "text-white" : "text-gray-900"
-            }`}
-          >
-            Tu Carrito
-          </h2>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-full ${
-              isDarkMode
-                ? "hover:bg-gray-800 text-gray-400 hover:text-white"
-                : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-            }`}
-            aria-label="Cerrar carrito"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          onClick={onClose}
+          aria-label="Cerrar carrito"
+        />
 
-        {/* Contenido del carrito */}
+        {/* Panel lateral */}
         <div
-          className={`flex-1 overflow-y-auto p-4 ${
+          ref={drawerRef}
+          className={`fixed inset-y-0 right-0 max-w-md w-full transform transition-transform ${
             isDarkMode ? "bg-gray-900" : "bg-white"
-          }`}
+          } shadow-xl flex flex-col`}
+          style={{ transform: "translateX(100%)" }}
         >
-          {cart.items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-10">
-              <p
-                className={`${
-                  isDarkMode ? "text-gray-400" : "text-gray-700"
-                } text-center`}
-              >
-                Tu carrito está vacío
-              </p>
-              <button
-                onClick={onClose}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Continuar comprando
-              </button>
-            </div>
-          ) : (
-            <ul
-              className={`divide-y ${
-                isDarkMode ? "divide-gray-700" : "divide-gray-200"
-              }`}
-            >
-              {cart.items.map((item, index) => renderCartItem(item, index))}
-            </ul>
-          )}
-        </div>
-
-        {/* Resumen y botón de checkout */}
-        {cart.items.length > 0 && (
+          {/* Cabecera */}
           <div
-            className={`border-t p-4 ${
+            className={`flex items-center justify-between px-4 py-3 border-b ${
               isDarkMode ? "border-gray-700" : "border-gray-200"
             }`}
           >
-            <div className="flex justify-between text-base font-medium">
-              <p
-                className={`${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                } font-semibold`}
-              >
-                Subtotal
-              </p>
-              <p
-                className={`${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                } font-semibold`}
-              >
-                {formatPrice(cart.totalPrice)}
-              </p>
-            </div>
-            <p
-              className={`mt-0.5 text-sm ${
-                isDarkMode ? "text-gray-300" : "text-gray-700"
+            <h2
+              className={`text-lg font-semibold ${
+                isDarkMode ? "text-white" : "text-gray-900"
               }`}
             >
-              Envío y descuentos calculados al finalizar la compra.
-            </p>
-            <div className="mt-4">
-              <Link
-                href="/checkout"
-                className={`flex items-center justify-center rounded-md border border-transparent px-6 py-3 text-base font-medium text-white shadow-sm w-full ${
-                  isDarkMode
-                    ? "bg-blue-700 hover:bg-blue-600"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-                onClick={onClose}
-              >
-                Finalizar Compra
-              </Link>
-            </div>
-            <div className="mt-2 flex justify-center text-center text-sm">
-              <button
-                type="button"
-                className={`font-medium ${
-                  isDarkMode
-                    ? "text-blue-400 hover:text-blue-300"
-                    : "text-blue-600 hover:text-blue-500"
-                } underline`}
-                onClick={onClose}
-              >
-                Continuar Comprando
-              </button>
-            </div>
+              Tu Carrito
+            </h2>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-full ${
+                isDarkMode
+                  ? "hover:bg-gray-800 text-gray-400 hover:text-white"
+                  : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+              }`}
+              aria-label="Cerrar carrito"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-        )}
+
+          {/* Contenido del carrito */}
+          <div
+            className={`flex-1 overflow-y-auto p-4 ${
+              isDarkMode ? "bg-gray-900" : "bg-white"
+            }`}
+          >
+            {cart.items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-10">
+                <p
+                  className={`${
+                    isDarkMode ? "text-gray-400" : "text-gray-700"
+                  } text-center`}
+                >
+                  Tu carrito está vacío
+                </p>
+                <button
+                  onClick={onClose}
+                  className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Continuar comprando
+                </button>
+              </div>
+            ) : (
+              <ul
+                className={`divide-y ${
+                  isDarkMode ? "divide-gray-700" : "divide-gray-200"
+                }`}
+              >
+                {cart.items.map((item, index) => renderCartItem(item, index))}
+              </ul>
+            )}
+          </div>
+
+          {/* Resumen y botón de checkout */}
+          {cart.items.length > 0 && (
+            <div
+              className={`border-t p-4 ${
+                isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div className="flex justify-between text-base font-medium">
+                <p
+                  className={`${
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  } font-semibold`}
+                >
+                  Subtotal
+                </p>
+                <p
+                  className={`${
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  } font-semibold`}
+                >
+                  {formatPrice(cart.totalPrice)}
+                </p>
+              </div>
+              <p
+                className={`mt-0.5 text-sm ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
+                Envío y descuentos calculados al finalizar la compra.
+              </p>
+              <div className="mt-4">
+                <Link
+                  href="/checkout"
+                  className={`flex items-center justify-center rounded-md border border-transparent px-6 py-3 text-base font-medium text-white shadow-sm w-full ${
+                    isDarkMode
+                      ? "bg-blue-700 hover:bg-blue-600"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                  onClick={onClose}
+                >
+                  Finalizar Compra
+                </Link>
+              </div>
+              <div className="mt-2 flex justify-center text-center text-sm">
+                <button
+                  type="button"
+                  className={`font-medium ${
+                    isDarkMode
+                      ? "text-blue-400 hover:text-blue-300"
+                      : "text-blue-600 hover:text-blue-500"
+                  } underline`}
+                  onClick={onClose}
+                >
+                  Continuar Comprando
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <Modal
+        isOpen={
+          persistentCart.loading && persistentCart.actualAction === "removeItem"
+        }
+        onClose={() => {
+          setRemovalDone(false);
+          persistentCart.setActualAction("");
+        }}
+        title={removalDone ? "¡Producto eliminado!" : "Eliminando producto"}
+        showCloseButton={removalDone}
+      >
+        <div className="flex flex-col justify-center items-center gap-4 min-h-[160px]">
+          {!removalDone ? (
+            <>
+              <span className="animate-bounce text-red-500">
+                <Trash2 size={48} />
+              </span>
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                Eliminando producto del carrito...
+              </Text>
+              <Loader />
+            </>
+          ) : (
+            <>
+              <FaCheckCircle size={48} className="text-green-500 animate-pop" />
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                ¡Producto eliminado!
+              </Text>
+              <Text variant="body" className="text-gray-500 text-center">
+                El producto fue eliminado correctamente del carrito.
+              </Text>
+            </>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 };
 

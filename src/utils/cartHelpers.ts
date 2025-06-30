@@ -6,8 +6,8 @@ import {
   SafeCartItem,
   CustomDesign,
   StandardProduct,
+  OrderItem,
 } from "@/types/cart";
-import { OrderItem } from "@/types/order";
 
 /**
  * Funciones utilitarias para trabajar con items de carrito y órdenes de forma segura
@@ -100,12 +100,28 @@ export const getImageUrlFromItem = (
 /**
  * Obtiene de forma segura la imagen del producto o diseño para mostrar (función original)
  */
+
+const convertEnViewNamesToEsp = (view: string): string => {
+  switch (view) {
+    case "front":
+      return "frente";
+    case "back":
+      return "espalda";
+    case "left":
+      return "izquierda";
+    case "right":
+      return "derecha";
+    default:
+      return view;
+  }
+};
+
 export const getItemImageSafely = (
   item: CartItem | OrderItem | SafeCartItem,
   activeView?: string
 ): string => {
   const fallbackImage = "/assets/products/placeholder.png";
-  const view = activeView || "front"; // Vista por defecto es 'front'
+  const view = activeView ?? "front"; // Vista por defecto es 'front'
 
   if (!item) return fallbackImage;
 
@@ -119,10 +135,14 @@ export const getItemImageSafely = (
     if (
       "previewImages" in product &&
       product.previewImages &&
-      typeof product.previewImages === "object" &&
-      view in product.previewImages
+      typeof product.previewImages === "object"
     ) {
-      return product.previewImages[view] as string;
+      if (view in product.previewImages) {
+        return product.previewImages[view] as string;
+      }
+      if (convertEnViewNamesToEsp(view) in product.previewImages) {
+        return product.previewImages[convertEnViewNamesToEsp(view)] as string;
+      }
     }
 
     // Alternativa: intentar encontrar la imagen que contenga el nombre de la vista
@@ -130,7 +150,7 @@ export const getItemImageSafely = (
     if (images.length > 0) {
       // Buscar imagen por nombre de vista en la URL
       const matchingImage = images.find(
-        (img) =>
+        (img: string) =>
           typeof img === "string" &&
           (img.toLowerCase().includes(`_${view}.`) ||
             img.toLowerCase().includes(`/${view}.`) ||
@@ -367,7 +387,8 @@ export const getItemDetailsSafely = (item: CartItem | OrderItem): string => {
  * Obtiene las vistas disponibles de un diseño personalizado de forma segura
  */
 export const getDesignViewsSafely = (
-  design: CustomDesign | null | undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  design: any
 ): string[] => {
   if (!design) return [];
 
@@ -375,10 +396,7 @@ export const getDesignViewsSafely = (
   const possibleViews = ["front", "back", "left", "right"];
 
   possibleViews.forEach((view) => {
-    // @ts-expect-error - Sabemos que puede tener estas propiedades
     if (view in design && design[view]) {
-      // Verificamos si hay una imagen de vista previa o imagen base
-      // @ts-expect-error - Sabemos que puede tener estas propiedades
       const hasPreview =
         typeof design[view] === "object" &&
         (design[view].previewImage || design[view].image);

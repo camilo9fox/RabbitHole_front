@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Utilidades para convertir entre tipos de datos del backend y frontend
  */
@@ -147,7 +148,8 @@ export const convertDTOToCustomDesign = (
  * @returns Un objeto StandardProduct listo para usar en el frontend
  */
 export const convertProductoToStandardProduct = (
-  producto: Producto
+  producto: Producto,
+  item?: any
 ): StandardProduct => {
   // Extraer URLs de imágenes de los thumbnails si existen
   const images: string[] = [];
@@ -181,10 +183,10 @@ export const convertProductoToStandardProduct = (
     id: producto.id.toString(),
     name: producto.nombre ?? "Producto",
     description: producto.descripcion ?? "",
-    price: 0, // El precio no está disponible en el objeto Producto
+    price: item?.precioUnitario, // El precio no está disponible en el objeto Producto
     images: images,
-    color: "", // El color no está disponible en el objeto Producto
-    size: "", // La talla no está disponible en el objeto Producto
+    color: item?.colorId, // El color no está disponible en el objeto Producto
+    size: item?.tallaId, // La talla no está disponible en el objeto Producto
     category: producto.categoriaNombre ?? "",
     inStock: producto.activo === 1,
     previewImages: previewImages,

@@ -39,6 +39,10 @@ import { AngleDesign } from "@/types/product";
 import { toast } from "react-hot-toast";
 import { useProductData } from "@/context/ProductDataContext";
 import { ProductOnCreatePutDTO } from "@/types/productData";
+import Modal from "../commons/organisms/Modal";
+import Loader from "../commons/atoms/Loader";
+import { FiShoppingCart } from "react-icons/fi";
+import { FaCheckCircle } from "react-icons/fa";
 
 // Interfaces
 interface ViewCustomization {
@@ -106,7 +110,7 @@ const CustomizeHTML = () => {
   const searchParams = useSearchParams();
   const { colors, sizes, fonts } = useProductData();
   const productId = searchParams.get("productId");
-
+  const [addCustomDone, setAddCustomDone] = useState(false);
   useEffect(() => {
     console.log({ colors });
     console.log({ sizes });
@@ -126,7 +130,7 @@ const CustomizeHTML = () => {
   const rightCanvasRef = useRef<HTMLCanvasHandle>(null);
 
   // Contexto del carrito
-  const { addCustomItem } = useCart();
+  const { addCustomItem, persistentCart } = useCart();
 
   // Estados
   const [isPageMounted, setIsPageMounted] = useState(false);
@@ -990,19 +994,9 @@ const CustomizeHTML = () => {
         updatedAt: new Date(),
       };
 
-      // Añadir al carrito
       addCustomItem(customDesign, 1);
-
-      // Mostrar mensaje de éxito
-      alert("¡Diseño personalizado añadido al carrito!");
-
-      // Opcional: redirigir al carrito o a otra página
-      // router.push('/cart');
-
-      console.log("Producto personalizado agregado al carrito:", customDesign);
     };
 
-    // Iniciar el proceso de captura
     captureFront();
   };
 
@@ -1245,558 +1239,606 @@ const CustomizeHTML = () => {
   }
 
   return (
-    <div className="py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Título y descripción */}
-        <div className="text-center mb-12">
-          <Text
-            variant="h1"
-            className={`text-4xl md:text-5xl font-bold ${
-              isDarkMode ? "text-white" : "text-gray-800"
-            } mb-4`}
-          >
-            Personaliza tu Polera
-          </Text>
-          <Text
-            variant="body"
-            className={`text-lg ${
-              isDarkMode ? "text-gray-300" : "text-gray-600"
-            } max-w-3xl mx-auto`}
-          >
-            Crea una polera única con tu diseño personalizado. Elige el color,
-            añade texto o sube una imagen.
-          </Text>
-        </div>
+    <>
+      <div className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Título y descripción */}
+          <div className="text-center mb-12">
+            <Text
+              variant="h1"
+              className={`text-4xl md:text-5xl font-bold ${
+                isDarkMode ? "text-white" : "text-gray-800"
+              } mb-4`}
+            >
+              Personaliza tu Polera
+            </Text>
+            <Text
+              variant="body"
+              className={`text-lg ${
+                isDarkMode ? "text-gray-300" : "text-gray-600"
+              } max-w-3xl mx-auto`}
+            >
+              Crea una polera única con tu diseño personalizado. Elige el color,
+              añade texto o sube una imagen.
+            </Text>
+          </div>
 
-        <FormProvider {...methods}>
-          <form
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-            onSubmit={(e) => {
-              e.preventDefault();
-              console.log("Formulario enviado");
-              handleFormSubmit();
-            }}
-          >
-            {/* Previsualización */}
-            <div className="order-2 lg:order-1">
-              <Card className="p-6 border rounded-xl shadow-lg">
-                <div className="rounded-xl overflow-hidden mb-6">
-                  <Text
-                    variant="h2"
-                    className={`text-2xl font-bold ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-4`}
-                  >
-                    Previsualización
-                  </Text>
+          <FormProvider {...methods}>
+            <form
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+              onSubmit={(e) => {
+                e.preventDefault();
+                console.log("Formulario enviado");
+                handleFormSubmit();
+              }}
+            >
+              {/* Previsualización */}
+              <div className="order-2 lg:order-1">
+                <Card className="p-6 border rounded-xl shadow-lg">
+                  <div className="rounded-xl overflow-hidden mb-6">
+                    <Text
+                      variant="h2"
+                      className={`text-2xl font-bold ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-4`}
+                    >
+                      Previsualización
+                    </Text>
 
-                  <div
-                    ref={previewRef}
-                    className="relative aspect-[3/4] w-full max-w-xl mx-auto mb-6 rounded-lg overflow-hidden shadow-lg border border-gray-200"
-                  >
-                    {/* Selector de vistas */}
-                    <div className="flex justify-center space-x-2 my-4">
-                      {tshirtViews.map((view) => (
-                        <button
-                          key={view.id}
-                          type="button"
-                          className={getViewButtonClass(
-                            formValues.view === view.id
-                          )}
-                          onClick={() =>
-                            setValue(
-                              "view",
-                              view.id as "front" | "back" | "left" | "right"
-                            )
-                          }
+                    <div
+                      ref={previewRef}
+                      className="relative aspect-[3/4] w-full max-w-xl mx-auto mb-6 rounded-lg overflow-hidden shadow-lg border border-gray-200"
+                    >
+                      {/* Selector de vistas */}
+                      <div className="flex justify-center space-x-2 my-4">
+                        {tshirtViews.map((view) => (
+                          <button
+                            key={view.id}
+                            type="button"
+                            className={getViewButtonClass(
+                              formValues.view === view.id
+                            )}
+                            onClick={() =>
+                              setValue(
+                                "view",
+                                view.id as "front" | "back" | "left" | "right"
+                              )
+                            }
+                          >
+                            {view.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Canvas para la personalización */}
+                      {formValues.view === "front" && (
+                        <HTMLCanvasV2
+                          ref={frontCanvasRef}
+                          tshirtImage={getTshirtImagePath()}
+                          tshirtColor={getSelectedColorHex()}
+                          useColorization={formValues.color !== "white"}
+                          customImage={currentViewData.image}
+                          customText={currentViewData.text || ""}
+                          textColor={currentViewData.textColor}
+                          textFont={selectedFont}
+                          textSize={currentViewData.textSize}
+                          imageWidth={currentViewData.imageWidth}
+                          imageHeight={currentViewData.imageHeight}
+                          textPositionX={currentViewData.textPositionX}
+                          textPositionY={currentViewData.textPositionY}
+                          imagePositionX={currentViewData.imagePositionX}
+                          imagePositionY={currentViewData.imagePositionY}
+                          onUpdateTextPosition={handleUpdateTextPosition}
+                          onUpdateImagePosition={handleUpdateImagePosition}
+                          onUpdateTextSize={handleUpdateTextSize}
+                          onUpdateImageSize={handleUpdateImageSize}
+                        />
+                      )}
+                      {formValues.view === "back" && (
+                        <HTMLCanvasV2
+                          ref={backCanvasRef}
+                          tshirtImage={getTshirtImagePath()}
+                          tshirtColor={getSelectedColorHex()}
+                          useColorization={formValues.color !== "white"}
+                          customImage={currentViewData.image}
+                          customText={currentViewData.text || ""}
+                          textColor={currentViewData.textColor}
+                          textFont={selectedFont}
+                          textSize={currentViewData.textSize}
+                          imageWidth={currentViewData.imageWidth}
+                          imageHeight={currentViewData.imageHeight}
+                          textPositionX={currentViewData.textPositionX}
+                          textPositionY={currentViewData.textPositionY}
+                          imagePositionX={currentViewData.imagePositionX}
+                          imagePositionY={currentViewData.imagePositionY}
+                          onUpdateTextPosition={handleUpdateTextPosition}
+                          onUpdateImagePosition={handleUpdateImagePosition}
+                          onUpdateTextSize={handleUpdateTextSize}
+                          onUpdateImageSize={handleUpdateImageSize}
+                        />
+                      )}
+                      {formValues.view === "left" && (
+                        <HTMLCanvasV2
+                          ref={leftCanvasRef}
+                          tshirtImage={getTshirtImagePath()}
+                          tshirtColor={getSelectedColorHex()}
+                          useColorization={formValues.color !== "white"}
+                          customImage={currentViewData.image}
+                          customText={currentViewData.text || ""}
+                          textColor={currentViewData.textColor}
+                          textFont={selectedFont}
+                          textSize={currentViewData.textSize}
+                          imageWidth={currentViewData.imageWidth}
+                          imageHeight={currentViewData.imageHeight}
+                          textPositionX={currentViewData.textPositionX}
+                          textPositionY={currentViewData.textPositionY}
+                          imagePositionX={currentViewData.imagePositionX}
+                          imagePositionY={currentViewData.imagePositionY}
+                          onUpdateTextPosition={handleUpdateTextPosition}
+                          onUpdateImagePosition={handleUpdateImagePosition}
+                          onUpdateTextSize={handleUpdateTextSize}
+                          onUpdateImageSize={handleUpdateImageSize}
+                        />
+                      )}
+                      {formValues.view === "right" && (
+                        <HTMLCanvasV2
+                          ref={rightCanvasRef}
+                          tshirtImage={getTshirtImagePath()}
+                          tshirtColor={getSelectedColorHex()}
+                          useColorization={formValues.color !== "white"}
+                          customImage={currentViewData.image}
+                          customText={currentViewData.text || ""}
+                          textColor={currentViewData.textColor}
+                          textFont={selectedFont}
+                          textSize={currentViewData.textSize}
+                          imageWidth={currentViewData.imageWidth}
+                          imageHeight={currentViewData.imageHeight}
+                          textPositionX={currentViewData.textPositionX}
+                          textPositionY={currentViewData.textPositionY}
+                          imagePositionX={currentViewData.imagePositionX}
+                          imagePositionY={currentViewData.imagePositionY}
+                          onUpdateTextPosition={handleUpdateTextPosition}
+                          onUpdateImagePosition={handleUpdateImagePosition}
+                          onUpdateTextSize={handleUpdateTextSize}
+                          onUpdateImageSize={handleUpdateImageSize}
+                        />
+                      )}
+                    </div>
+
+                    {/* Precio y botón de añadir al carrito (solo para usuarios normales) */}
+                    <div className="flex flex-col sm:flex-row justify-between items-center">
+                      <div className="mb-4 sm:mb-0">
+                        <Text
+                          variant="h3"
+                          className={`text-xl font-bold ${
+                            isDarkMode ? "text-white" : "text-gray-800"
+                          }`}
                         >
-                          {view.label}
+                          Precio Total: {formatPrice(totalPrice)}
+                        </Text>
+                        <Text
+                          variant="body"
+                          className={`text-sm ${
+                            isDarkMode ? "text-gray-400" : "text-gray-600"
+                          }`}
+                        >
+                          Incluye personalización y envío
+                        </Text>
+                      </div>
+                      {!isAdmin && (
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          onClick={handleAddToCart}
+                        >
+                          Añadir al Carrito
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Opciones de personalización */}
+              <div ref={optionsRef} className="order-1 lg:order-2">
+                <Card className="p-6 border rounded-xl shadow-lg">
+                  {/* Selección de color */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Color de la Polera
+                    </Text>
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={`w-10 h-10 rounded-full border-2 ${
+                            formValues.color === option.id
+                              ? "border-blue-600 ring-2 ring-blue-300"
+                              : "border-gray-300"
+                          }`}
+                          style={{ backgroundColor: option.value }}
+                          onClick={() => setValue("color", option.id)}
+                          aria-label={`Color ${option.label}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Selección de talla */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Talla
+                    </Text>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={getSizeButtonClass(
+                            formValues.size === option.id
+                          )}
+                          onClick={() => setValue("size", option.id)}
+                        >
+                          {option.label}
                         </button>
                       ))}
                     </div>
-
-                    {/* Canvas para la personalización */}
-                    {formValues.view === "front" && (
-                      <HTMLCanvasV2
-                        ref={frontCanvasRef}
-                        tshirtImage={getTshirtImagePath()}
-                        tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== "white"}
-                        customImage={currentViewData.image}
-                        customText={currentViewData.text || ""}
-                        textColor={currentViewData.textColor}
-                        textFont={selectedFont}
-                        textSize={currentViewData.textSize}
-                        imageWidth={currentViewData.imageWidth}
-                        imageHeight={currentViewData.imageHeight}
-                        textPositionX={currentViewData.textPositionX}
-                        textPositionY={currentViewData.textPositionY}
-                        imagePositionX={currentViewData.imagePositionX}
-                        imagePositionY={currentViewData.imagePositionY}
-                        onUpdateTextPosition={handleUpdateTextPosition}
-                        onUpdateImagePosition={handleUpdateImagePosition}
-                        onUpdateTextSize={handleUpdateTextSize}
-                        onUpdateImageSize={handleUpdateImageSize}
-                      />
-                    )}
-                    {formValues.view === "back" && (
-                      <HTMLCanvasV2
-                        ref={backCanvasRef}
-                        tshirtImage={getTshirtImagePath()}
-                        tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== "white"}
-                        customImage={currentViewData.image}
-                        customText={currentViewData.text || ""}
-                        textColor={currentViewData.textColor}
-                        textFont={selectedFont}
-                        textSize={currentViewData.textSize}
-                        imageWidth={currentViewData.imageWidth}
-                        imageHeight={currentViewData.imageHeight}
-                        textPositionX={currentViewData.textPositionX}
-                        textPositionY={currentViewData.textPositionY}
-                        imagePositionX={currentViewData.imagePositionX}
-                        imagePositionY={currentViewData.imagePositionY}
-                        onUpdateTextPosition={handleUpdateTextPosition}
-                        onUpdateImagePosition={handleUpdateImagePosition}
-                        onUpdateTextSize={handleUpdateTextSize}
-                        onUpdateImageSize={handleUpdateImageSize}
-                      />
-                    )}
-                    {formValues.view === "left" && (
-                      <HTMLCanvasV2
-                        ref={leftCanvasRef}
-                        tshirtImage={getTshirtImagePath()}
-                        tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== "white"}
-                        customImage={currentViewData.image}
-                        customText={currentViewData.text || ""}
-                        textColor={currentViewData.textColor}
-                        textFont={selectedFont}
-                        textSize={currentViewData.textSize}
-                        imageWidth={currentViewData.imageWidth}
-                        imageHeight={currentViewData.imageHeight}
-                        textPositionX={currentViewData.textPositionX}
-                        textPositionY={currentViewData.textPositionY}
-                        imagePositionX={currentViewData.imagePositionX}
-                        imagePositionY={currentViewData.imagePositionY}
-                        onUpdateTextPosition={handleUpdateTextPosition}
-                        onUpdateImagePosition={handleUpdateImagePosition}
-                        onUpdateTextSize={handleUpdateTextSize}
-                        onUpdateImageSize={handleUpdateImageSize}
-                      />
-                    )}
-                    {formValues.view === "right" && (
-                      <HTMLCanvasV2
-                        ref={rightCanvasRef}
-                        tshirtImage={getTshirtImagePath()}
-                        tshirtColor={getSelectedColorHex()}
-                        useColorization={formValues.color !== "white"}
-                        customImage={currentViewData.image}
-                        customText={currentViewData.text || ""}
-                        textColor={currentViewData.textColor}
-                        textFont={selectedFont}
-                        textSize={currentViewData.textSize}
-                        imageWidth={currentViewData.imageWidth}
-                        imageHeight={currentViewData.imageHeight}
-                        textPositionX={currentViewData.textPositionX}
-                        textPositionY={currentViewData.textPositionY}
-                        imagePositionX={currentViewData.imagePositionX}
-                        imagePositionY={currentViewData.imagePositionY}
-                        onUpdateTextPosition={handleUpdateTextPosition}
-                        onUpdateImagePosition={handleUpdateImagePosition}
-                        onUpdateTextSize={handleUpdateTextSize}
-                        onUpdateImageSize={handleUpdateImageSize}
-                      />
-                    )}
                   </div>
 
-                  {/* Precio y botón de añadir al carrito (solo para usuarios normales) */}
-                  <div className="flex flex-col sm:flex-row justify-between items-center">
-                    <div className="mb-4 sm:mb-0">
-                      <Text
-                        variant="h3"
-                        className={`text-xl font-bold ${
-                          isDarkMode ? "text-white" : "text-gray-800"
+                  {/* Texto personalizado para la vista actual */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Texto Personalizado (
+                      {tshirtViews.find((v) => v.id === currentView)?.label})
+                    </Text>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Escribe tu texto personalizado"
+                        className={`w-full p-3 rounded-md border ${
+                          isDarkMode
+                            ? "bg-gray-800 border-gray-700 text-white"
+                            : "bg-white border-gray-300 text-gray-800"
                         }`}
-                      >
-                        Precio Total: {formatPrice(totalPrice)}
-                      </Text>
-                      <Text
-                        variant="body"
-                        className={`text-sm ${
-                          isDarkMode ? "text-gray-400" : "text-gray-600"
-                        }`}
-                      >
-                        Incluye personalización y envío
-                      </Text>
+                        value={currentViewData.text || ""}
+                        onChange={(e) =>
+                          setValue(`${currentView}.text`, e.target.value)
+                        }
+                        disabled={!!currentViewData.image}
+                      />
+                      {currentViewData.image && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 rounded-md">
+                          <Text variant="body" className="text-white text-sm">
+                            Desactiva la imagen para usar texto
+                          </Text>
+                        </div>
+                      )}
                     </div>
-                    {!isAdmin && (
-                      <Button
-                        variant="primary"
-                        size="lg"
-                        onClick={handleAddToCart}
-                      >
-                        Añadir al Carrito
-                      </Button>
-                    )}
                   </div>
-                </div>
-              </Card>
-            </div>
 
-            {/* Opciones de personalización */}
-            <div ref={optionsRef} className="order-1 lg:order-2">
-              <Card className="p-6 border rounded-xl shadow-lg">
-                {/* Selección de color */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Color de la Polera
-                  </Text>
-                  <div className="flex flex-wrap gap-2">
-                    {colors.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`w-10 h-10 rounded-full border-2 ${
-                          formValues.color === option.id
-                            ? "border-blue-600 ring-2 ring-blue-300"
-                            : "border-gray-300"
-                        }`}
-                        style={{ backgroundColor: option.value }}
-                        onClick={() => setValue("color", option.id)}
-                        aria-label={`Color ${option.label}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Selección de talla */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Talla
-                  </Text>
-                  <div className="flex flex-wrap gap-2">
-                    {sizes.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={getSizeButtonClass(
-                          formValues.size === option.id
-                        )}
-                        onClick={() => setValue("size", option.id)}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Texto personalizado para la vista actual */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Texto Personalizado (
-                    {tshirtViews.find((v) => v.id === currentView)?.label})
-                  </Text>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Escribe tu texto personalizado"
-                      className={`w-full p-3 rounded-md border ${
-                        isDarkMode
-                          ? "bg-gray-800 border-gray-700 text-white"
-                          : "bg-white border-gray-300 text-gray-800"
-                      }`}
-                      value={currentViewData.text || ""}
-                      onChange={(e) =>
-                        setValue(`${currentView}.text`, e.target.value)
-                      }
-                      disabled={!!currentViewData.image}
-                    />
-                    {currentViewData.image && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 rounded-md">
-                        <Text variant="body" className="text-white text-sm">
-                          Desactiva la imagen para usar texto
-                        </Text>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selección de fuente para la vista actual */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Fuente del Texto (
-                    {tshirtViews.find((v) => v.id === currentView)?.label})
-                  </Text>
-                  <div className="flex flex-wrap gap-2">
-                    {fonts.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={getFontButtonClass(
-                          currentViewData.textFont === option.value
-                        )}
-                        onClick={() =>
-                          setValue(`${currentView}.textFont`, option.value)
-                        }
-                        disabled={
-                          !!currentViewData.image || !currentViewData.text
-                        }
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Selección de color del texto para la vista actual */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Color del Texto (
-                    {tshirtViews.find((v) => v.id === currentView)?.label})
-                  </Text>
-                  <div className="flex flex-wrap gap-2">
-                    {colors
-                      .filter((color) => textColorOptions.includes(color.id))
-                      .map((color) => (
+                  {/* Selección de fuente para la vista actual */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Fuente del Texto (
+                      {tshirtViews.find((v) => v.id === currentView)?.label})
+                    </Text>
+                    <div className="flex flex-wrap gap-2">
+                      {fonts.map((option) => (
                         <button
-                          key={color.id}
+                          key={option.id}
                           type="button"
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
-                          style={{ backgroundColor: color.value }}
+                          className={getFontButtonClass(
+                            currentViewData.textFont === option.value
+                          )}
                           onClick={() =>
-                            setValue(`${currentView}.textColor`, color.id)
+                            setValue(`${currentView}.textFont`, option.value)
                           }
                           disabled={
                             !!currentViewData.image || !currentViewData.text
                           }
                         >
-                          {currentViewData.textColor === color.id && (
-                            <span className="text-white text-xs">✓</span>
-                          )}
+                          {option.label}
                         </button>
                       ))}
-                  </div>
-                </div>
-
-                {/* Subida de imagen para la vista actual */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Imagen Personalizada (
-                    {tshirtViews.find((v) => v.id === currentView)?.label})
-                  </Text>
-                  {!currentViewData.image ? (
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md p-6 text-center">
-                      <input
-                        type="file"
-                        id="image-upload"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={!!currentViewData.text}
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className={`cursor-pointer inline-block px-4 py-2 rounded-md bg-blue-600 text-white ${
-                          currentViewData.text
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
-                      >
-                        Subir Imagen
-                      </label>
-                      {currentViewData.text && (
-                        <Text
-                          variant="body"
-                          className="mt-2 text-sm text-gray-500 dark:text-gray-400"
-                        >
-                          Elimina el texto para subir una imagen
-                        </Text>
-                      )}
                     </div>
-                  ) : (
-                    <div className="relative border rounded-md overflow-hidden">
-                      {currentViewData.image && (
-                        <>
-                          <Image
-                            src={currentViewData.image}
-                            alt="Imagen personalizada"
-                            width={300}
-                            height={200}
-                            className="w-full h-auto max-h-48 object-contain"
-                          />
+                  </div>
+
+                  {/* Selección de color del texto para la vista actual */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Color del Texto (
+                      {tshirtViews.find((v) => v.id === currentView)?.label})
+                    </Text>
+                    <div className="flex flex-wrap gap-2">
+                      {colors
+                        .filter((color) => textColorOptions.includes(color.id))
+                        .map((color) => (
                           <button
+                            key={color.id}
                             type="button"
-                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1"
-                            onClick={handleRemoveImage}
+                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                            style={{ backgroundColor: color.value }}
+                            onClick={() =>
+                              setValue(`${currentView}.textColor`, color.id)
+                            }
+                            disabled={
+                              !!currentViewData.image || !currentViewData.text
+                            }
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            {currentViewData.textColor === color.id && (
+                              <span className="text-white text-xs">✓</span>
+                            )}
                           </button>
-                          <div className="mt-2 p-2 text-center bg-gray-100 dark:bg-gray-800">
-                            <Text
-                              variant="body"
-                              className="text-sm text-gray-600 dark:text-gray-300"
-                            >
-                              Puedes arrastrar y redimensionar la imagen en la
-                              previsualización
-                            </Text>
-                          </div>
-                        </>
-                      )}
+                        ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Detalles adicionales */}
-                <div className="mb-6">
-                  <Text
-                    variant="body"
-                    className={`font-medium ${
-                      isDarkMode ? "text-white" : "text-gray-800"
-                    } mb-2`}
-                  >
-                    Detalles Adicionales
-                  </Text>
-                  <textarea
-                    className={`w-full p-3 rounded-md border ${
-                      isDarkMode
-                        ? "bg-gray-800 border-gray-700 text-white"
-                        : "bg-white border-gray-300 text-gray-800"
-                    } min-h-[100px]`}
-                    placeholder="Añade cualquier detalle adicional sobre tu pedido"
-                    {...register("details")}
-                  />
-                </div>
-
-                {/* Botón de Agregar al Carrito (solo para usuarios normales) */}
-                {!isAdmin && (
-                  <div className="mt-8">
-                    <button
-                      type="submit"
-                      className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                      </svg>
-                      Agregar al Carrito
-                    </button>
                   </div>
-                )}
 
-                {/* Opciones de administrador */}
-                {isAdmin && (
-                  <div className="mt-8">
-                    <div
-                      className={`p-6 rounded-xl shadow-lg border ${
-                        isDarkMode
-                          ? "bg-gray-800 text-white border-gray-700"
-                          : "bg-white text-gray-800 border-gray-200"
-                      }`}
+                  {/* Subida de imagen para la vista actual */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
                     >
-                      <div
-                        className={`flex items-center mb-4 pb-3 border-b ${
-                          isDarkMode ? "border-gray-700" : "border-gray-200"
-                        }`}
+                      Imagen Personalizada (
+                      {tshirtViews.find((v) => v.id === currentView)?.label})
+                    </Text>
+                    {!currentViewData.image ? (
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md p-6 text-center">
+                        <input
+                          type="file"
+                          id="image-upload"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={!!currentViewData.text}
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className={`cursor-pointer inline-block px-4 py-2 rounded-md bg-blue-600 text-white ${
+                            currentViewData.text
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                        >
+                          Subir Imagen
+                        </label>
+                        {currentViewData.text && (
+                          <Text
+                            variant="body"
+                            className="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                          >
+                            Elimina el texto para subir una imagen
+                          </Text>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative border rounded-md overflow-hidden">
+                        {currentViewData.image && (
+                          <>
+                            <Image
+                              src={currentViewData.image}
+                              alt="Imagen personalizada"
+                              width={300}
+                              height={200}
+                              className="w-full h-auto max-h-48 object-contain"
+                            />
+                            <button
+                              type="button"
+                              className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1"
+                              onClick={handleRemoveImage}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                            <div className="mt-2 p-2 text-center bg-gray-100 dark:bg-gray-800">
+                              <Text
+                                variant="body"
+                                className="text-sm text-gray-600 dark:text-gray-300"
+                              >
+                                Puedes arrastrar y redimensionar la imagen en la
+                                previsualización
+                              </Text>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Detalles adicionales */}
+                  <div className="mb-6">
+                    <Text
+                      variant="body"
+                      className={`font-medium ${
+                        isDarkMode ? "text-white" : "text-gray-800"
+                      } mb-2`}
+                    >
+                      Detalles Adicionales
+                    </Text>
+                    <textarea
+                      className={`w-full p-3 rounded-md border ${
+                        isDarkMode
+                          ? "bg-gray-800 border-gray-700 text-white"
+                          : "bg-white border-gray-300 text-gray-800"
+                      } min-h-[100px]`}
+                      placeholder="Añade cualquier detalle adicional sobre tu pedido"
+                      {...register("details")}
+                    />
+                  </div>
+
+                  {/* Botón de Agregar al Carrito (solo para usuarios normales) */}
+                  {!isAdmin && (
+                    <div className="mt-8">
+                      <button
+                        type="submit"
+                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 mr-2 text-blue-600"
+                          className="h-5 w-5 mr-2"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
-                            clipRule="evenodd"
-                          />
+                          <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                         </svg>
-                        <Text
-                          variant="h3"
-                          className={`font-bold text-lg ${
-                            isDarkMode ? "text-white" : "text-gray-800"
-                          }`}
-                        >
-                          Opciones de Administrador
-                        </Text>
-                      </div>
-                      <AdminProductForm productId={productId ?? undefined} />
+                        Agregar al Carrito
+                      </button>
+                    </div>
+                  )}
 
-                      {/* Botón de Crear/Actualizar Producto */}
-                      <div className="mt-6">
-                        <button
-                          type="submit"
-                          className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-md transition-colors duration-200 flex items-center justify-center"
+                  {/* Opciones de administrador */}
+                  {isAdmin && (
+                    <div className="mt-8">
+                      <div
+                        className={`p-6 rounded-xl shadow-lg border ${
+                          isDarkMode
+                            ? "bg-gray-800 text-white border-gray-700"
+                            : "bg-white text-gray-800 border-gray-200"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center mb-4 pb-3 border-b ${
+                            isDarkMode ? "border-gray-700" : "border-gray-200"
+                          }`}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5 mr-2"
+                            className="h-6 w-6 mr-2 text-blue-600"
                             viewBox="0 0 20 20"
                             fill="currentColor"
                           >
                             <path
                               fillRule="evenodd"
-                              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
                               clipRule="evenodd"
                             />
                           </svg>
-                          {productId ? "Actualizar Producto" : "Crear Producto"}
-                        </button>
+                          <Text
+                            variant="h3"
+                            className={`font-bold text-lg ${
+                              isDarkMode ? "text-white" : "text-gray-800"
+                            }`}
+                          >
+                            Opciones de Administrador
+                          </Text>
+                        </div>
+                        <AdminProductForm productId={productId ?? undefined} />
+
+                        {/* Botón de Crear/Actualizar Producto */}
+                        <div className="mt-6">
+                          <button
+                            type="submit"
+                            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-md transition-colors duration-200 flex items-center justify-center"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 mr-2"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            {productId
+                              ? "Actualizar Producto"
+                              : "Crear Producto"}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </Card>
-            </div>
-          </form>
-        </FormProvider>
+                  )}
+                </Card>
+              </div>
+            </form>
+          </FormProvider>
+        </div>
       </div>
-    </div>
+      <Modal
+        isOpen={
+          persistentCart.loading &&
+          persistentCart.actualAction === "addCustomItem"
+        }
+        onClose={() => {
+          setAddCustomDone(false);
+          persistentCart.setActualAction("");
+        }}
+        title={
+          addCustomDone ? "¡Diseño agregado!" : "Agregando diseño personalizado"
+        }
+        showCloseButton={addCustomDone}
+      >
+        <div className="flex flex-col justify-center items-center gap-4 min-h-[160px]">
+          {!addCustomDone ? (
+            <>
+              <span className="animate-bounce text-blue-500">
+                <FiShoppingCart size={48} />
+              </span>
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                Agregando diseño personalizado al carrito...
+              </Text>
+              <Loader />
+            </>
+          ) : (
+            <>
+              <FaCheckCircle size={48} className="text-green-500 animate-pop" />
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                ¡Diseño agregado!
+              </Text>
+              <Text variant="body" className="text-gray-500 text-center">
+                El diseño personalizado fue agregado correctamente al carrito.
+              </Text>
+            </>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 };
 

@@ -29,13 +29,23 @@ export const initCart = async (userId: number) => {
   }
 };
 
+export const getCartByID = async (cartId: number) => {
+  try {
+    const response = await axios.get(API_ROUTES.cart + "/" + cartId);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener carrito:", error);
+    throw error;
+  }
+};
+
 export const addProductToCart = async (
   newProductItem: newProductItem,
   cartId: number
 ) => {
   try {
     const response = await axios.post(
-      API_ROUTES.cart + "/" + cartId + "/producto",
+      API_ROUTES.cart + "/" + cartId + "/productos",
       newProductItem
     );
     return response.data;
@@ -51,7 +61,7 @@ export const addCustomItemToCart = async (
 ) => {
   try {
     const response = await axios.post(
-      API_ROUTES.cart + "/" + cartId + "/diseno",
+      API_ROUTES.cart + "/" + cartId + "/disenos",
       newCustomItem
     );
     return response.data;

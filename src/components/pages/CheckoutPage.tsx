@@ -24,6 +24,7 @@ import {
 } from "@/utils/cartHelpers";
 import {
   createOrderAnonymous,
+  createOrderUser,
   InfoEnvio,
   InfoPago,
 } from "@/services/orderService";
@@ -33,8 +34,6 @@ import { addThumbnailOrderItem } from "@/services/thumbnailService";
 import Modal from "../commons/organisms/Modal";
 import Loader from "../commons/atoms/Loader";
 import Text from "../commons/atoms/Text";
-import axios from "axios";
-import { API_ROUTES } from "@/config/apiRoutes";
 
 // Componentes de formulario
 // Componente input con manejo de temas oscuro/claro
@@ -73,7 +72,7 @@ const Input = ({
 };
 
 const CheckoutPage: React.FC = () => {
-  const { cart, removeItem, clearCart } = useCart();
+  const { cart, removeItem, clearCart, persistentCart } = useCart();
   const { resolvedTheme } = useTheme();
   const { data: session } = useSession();
   const router = useRouter();
@@ -81,7 +80,6 @@ const CheckoutPage: React.FC = () => {
   const [step, setStep] = useState(1);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [userId, setUserId] = useState<number>(1);
   // Estado para controlar qué vista se muestra para cada ítem personalizado
   const [activeViews, setActiveViews] = useState<Record<string, string>>({});
 
@@ -105,26 +103,8 @@ const CheckoutPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (session?.profile?.oid) {
-      fetchUserId();
-    }
-  }, [session]);
-
-  const fetchUserId = async () => {
-    try {
-      const response = await axios.get(
-        API_ROUTES.users + "/oid/" + session!.profile!.oid,
-        {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }
-      );
-      setUserId(response.data.id);
-    } catch (error) {
-      console.error("Error al obtener ID del usuario:", error);
-    }
-  };
+    console.log({ persistentCart });
+  }, []);
 
   const onCloseModal = () => {
     setModalOpen(false);
@@ -194,6 +174,67 @@ const CheckoutPage: React.FC = () => {
     setStep(step + 1);
   };
 
+  const createOrderFromMemoryCart = async (
+    shippingInfo: InfoEnvio,
+    paymentInfo: InfoPago
+  ) => {
+    const customItems: any[] =
+      await createPersonalizedProductAndGetOrderItems();
+    const productItems: any[] = getProductOrderItemFromCartItem();
+    if (customItems.length > 0 || productItems.length > 0) {
+      const order = await createOrderAnonymous({
+        items: [...customItems, ...productItems],
+        infoEnvio: shippingInfo,
+        infoPago: paymentInfo,
+      });
+      console.log("Orden guardada exitosamente:", order);
+      // if (customItems.length > 0) {
+      //   const orderCustomItem = order.items
+      //     .filter((item: any) => item.disenoPersonalizadoId !== null)
+      //     .map((item: any) => {
+      //       return {
+      //         id: item.id,
+      //         angulos: customItems.find(
+      //           (customItem: any) =>
+      //             customItem.disenoPersonalizadoId ===
+      //             item.disenoPersonalizadoId
+      //         )?.angulos,
+      //       };
+      //     });
+      //   await addThumbnailToCustomOrderItem(orderCustomItem);
+      // }
+      if (productItems.length > 0) {
+        const orderProductItem = order.items
+          .filter((item: any) => item.productoId !== null)
+          .map((item: any) => {
+            return {
+              id: item.id,
+              previewImages: productItems.find(
+                (productItem: any) => productItem.productoId === item.productoId
+              )?.previewImages,
+            };
+          });
+        await addThumbnailToProductOrderItem(orderProductItem);
+      }
+      setOrderId(order.id);
+    }
+  };
+
+  const createOrderFromBDCart = async (
+    infoEnvio: InfoEnvio,
+    infoPago: InfoPago
+  ) => {
+    const body = {
+      infoEnvio,
+      infoPago,
+      usuarioId: persistentCart.userId,
+      carritoId: persistentCart.cartId,
+    };
+    const order = await createOrderUser(body);
+    console.log("Orden guardada exitosamente:", order);
+    setOrderId(order.id);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalOpen(true);
@@ -228,47 +269,10 @@ const CheckoutPage: React.FC = () => {
     });
 
     try {
-      // Guardar el pedido usando nuestro servicio
-      const customItems: any[] =
-        await createPersonalizedProductAndGetOrderItems();
-      const productItems: any[] = getProductOrderItemFromCartItem();
-      if (customItems.length > 0 || productItems.length > 0) {
-        const order = await createOrderAnonymous({
-          items: [...customItems, ...productItems],
-          infoEnvio: shippingInfo,
-          infoPago: paymentInfo,
-        });
-        console.log("Orden guardada exitosamente:", order);
-        // if (customItems.length > 0) {
-        //   const orderCustomItem = order.items
-        //     .filter((item: any) => item.disenoPersonalizadoId !== null)
-        //     .map((item: any) => {
-        //       return {
-        //         id: item.id,
-        //         angulos: customItems.find(
-        //           (customItem: any) =>
-        //             customItem.disenoPersonalizadoId ===
-        //             item.disenoPersonalizadoId
-        //         )?.angulos,
-        //       };
-        //     });
-        //   await addThumbnailToCustomOrderItem(orderCustomItem);
-        // }
-        if (productItems.length > 0) {
-          const orderProductItem = order.items
-            .filter((item: any) => item.productoId !== null)
-            .map((item: any) => {
-              return {
-                id: item.id,
-                previewImages: productItems.find(
-                  (productItem: any) =>
-                    productItem.productoId === item.productoId
-                )?.previewImages,
-              };
-            });
-          await addThumbnailToProductOrderItem(orderProductItem);
-        }
-        setOrderId(order.id);
+      if (persistentCart.userId && persistentCart.cartId) {
+        await createOrderFromBDCart(shippingInfo, paymentInfo);
+      } else {
+        await createOrderFromMemoryCart(shippingInfo, paymentInfo);
       }
       setModalOpen(false);
       setOrderStatus("success");
@@ -284,26 +288,16 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const personalizedDesigns = cart.items.map((item) => {
-      let personalizedDesign;
-      if (isCustomItem(item)) {
-        const design = getDesignSafely(item)!;
-        personalizedDesign = convertCustomDesignToDTO(design);
-      }
-      return personalizedDesign;
-    });
-    console.log("cart", cart.items);
-    console.log("personalizedDesigns", personalizedDesigns);
-  }, []);
-
   const createPersonalizedProductAndGetOrderItems = async () => {
     let hasCustomItems = false;
     const personalizedDesigns = cart.items.map((item) => {
       let personalizedDesign;
       if (isCustomItem(item)) {
         const design = getDesignSafely(item)!;
-        personalizedDesign = convertCustomDesignToDTO(design, userId);
+        personalizedDesign = convertCustomDesignToDTO(
+          design,
+          persistentCart?.userId ?? 1
+        );
         hasCustomItems = true;
         return personalizedDesign;
       }
@@ -345,17 +339,12 @@ const CheckoutPage: React.FC = () => {
     };
   };
 
-  useEffect(() => {
-    getProductOrderItemFromCartItem();
-  }, []);
-
   const getProductOrderItemFromCartItem = () => {
     let hasProductItems = false;
     const productOrderItems = cart.items.map((item) => {
       if (isProductItem(item)) {
         hasProductItems = true;
         const product = getProductSafely(item);
-        console.log({ product });
         return {
           productoId: Number(product?.id),
           tipoItemId: 1,
@@ -368,9 +357,6 @@ const CheckoutPage: React.FC = () => {
       return null;
     });
     if (!hasProductItems) return [];
-    console.log({
-      productFilter: productOrderItems.filter((item) => item !== null),
-    });
     return productOrderItems.filter((item) => item !== null);
   };
 
@@ -753,6 +739,24 @@ const CheckoutPage: React.FC = () => {
           required
         />
         <Input
+          label="Región"
+          name="state"
+          value={formData.state}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Teléfono"
+          type="tel"
+          name="phone"
+          value={formData.phone}
+          onChange={handleChange}
+          required
+        />
+        <Input
           label="Código Postal"
           name="postalCode"
           value={formData.postalCode}
@@ -760,15 +764,6 @@ const CheckoutPage: React.FC = () => {
           required
         />
       </div>
-
-      <Input
-        label="Teléfono"
-        type="tel"
-        name="phone"
-        value={formData.phone}
-        onChange={handleChange}
-        required
-      />
 
       <div className="flex justify-between pt-4">
         <Link

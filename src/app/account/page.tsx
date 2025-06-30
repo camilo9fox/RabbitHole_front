@@ -456,7 +456,13 @@ export default function AccountPage() {
               <select
                 id="ciudad"
                 name="ciudad"
-                value={userData.ciudad || ""}
+                value={
+                  citiesByRegion[userData?.estado ?? "Arica y Parinacota"].some(
+                    (city) => city === userData?.ciudad
+                  )
+                    ? userData?.ciudad
+                    : ""
+                }
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 rounded-md border ${
@@ -466,7 +472,7 @@ export default function AccountPage() {
                 } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
               >
                 <option value="">Seleccionar ciudad</option>
-                {citiesByRegion[userData?.estado || "Arica y Parinacota"].map(
+                {citiesByRegion[userData?.estado ?? "Arica y Parinacota"].map(
                   (city) => (
                     <option key={city} value={city}>
                       {city}

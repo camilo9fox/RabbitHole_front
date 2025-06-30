@@ -15,7 +15,10 @@ import { useCart } from "@/context/CartContext";
 import { ColorOption, ProductOnGetDTO, SizeOption } from "@/types/productData";
 import { useProductData } from "@/context/ProductDataContext";
 import { fetchProductById } from "@/services";
-
+import Modal from "@/components/commons/organisms/Modal";
+import { Loader } from "lucide-react";
+import { FiShoppingCart } from "react-icons/fi";
+import { FaCheckCircle } from "react-icons/fa";
 // Ángulos disponibles para la visualización del producto
 const ANGLES = ["frente", "espalda", "izquierda", "derecha"];
 
@@ -33,6 +36,7 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const { colors, sizes } = useProductData();
+  const { persistentCart } = useCart();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [angleDesigns, setAngleDesigns] = useState<any[]>([]);
 
@@ -46,7 +50,22 @@ export default function ProductDetail() {
     izquierda: useRef<ProductCanvasRefHandle>(null),
     derecha: useRef<ProductCanvasRefHandle>(null),
   };
+  const [addDone, setAddDone] = useState(false);
 
+  useEffect(() => {
+    if (
+      !persistentCart.loading &&
+      persistentCart.actualAction === "addStandardItem"
+    ) {
+      setAddDone(true);
+      const timer = setTimeout(() => {
+        setAddDone(false);
+        persistentCart.setActualAction(""); // Limpia la acción
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    if (persistentCart.loading) setAddDone(false);
+  }, [persistentCart.loading, persistentCart.actualAction]);
   // Inicializar colores y tallas predeterminados cuando se carga el producto
   useEffect(() => {
     if (product) {
@@ -497,196 +516,243 @@ export default function ProductDetail() {
   }
 
   return (
-    <div
-      className={`min-h-screen ${
-        isDarkMode ? "bg-gray-950" : "bg-gray-50"
-      } pt-20 relative`}
-    >
-      {/* Notificación de éxito */}
-      {showNotification && (
-        <div className="fixed top-24 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-down">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          <div>
-            <p className="font-medium">¡Producto agregado al carrito!</p>
-            <p className="text-sm">
-              {product?.nombre} -{" "}
-              {selectedColor && selectedSize
-                ? `${selectedColor}, Talla ${selectedSize}`
-                : ""}
-            </p>
+    <>
+      <div
+        className={`min-h-screen ${
+          isDarkMode ? "bg-gray-950" : "bg-gray-50"
+        } pt-20 relative`}
+      >
+        {/* Notificación de éxito */}
+        {showNotification && (
+          <div className="fixed top-24 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-down">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <div>
+              <p className="font-medium">¡Producto agregado al carrito!</p>
+              <p className="text-sm">
+                {product?.nombre} -{" "}
+                {selectedColor && selectedSize
+                  ? `${selectedColor}, Talla ${selectedSize}`
+                  : ""}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Columna izquierda: Imágenes del producto */}
-          <div className="space-y-8">
-            {/* Canvas del producto con colorización dinámica */}
-            <div className="h-[650px] w-full flex items-center justify-center">
-              {/* Canvas del ángulo actual */}
-              {angleDesigns.length > 0 && (
-                <>
-                  <ProductCanvas
-                    key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`}
-                    angle={currentAngle}
-                    color={colors.find((c) => c.id === selectedColor)!.value}
-                    className="w-full h-full max-w-2xl mx-auto"
-                    design={
-                      angleDesigns.find((a) => a.angle === currentAngle)?.design
-                    }
-                    ref={canvasRefs[currentAngle as keyof typeof canvasRefs]}
-                  />
-                  {/* Canvases ocultos para otros ángulos (necesarios para capturar imágenes) */}
-                  <div className="hidden">
-                    {ANGLES.filter((angle) => angle !== currentAngle).map(
-                      (angle) => (
-                        <ProductCanvas
-                          key={`hidden-canvas-${angle}-${selectedColor}`}
-                          angle={angle}
-                          color={
-                            colors.find((c) => c.id === selectedColor)!.value
-                          }
-                          design={
-                            angleDesigns.find((a) => a.angle === angle)?.design
-                          }
-                          className="w-0 h-0 overflow-hidden"
-                          ref={canvasRefs[angle as keyof typeof canvasRefs]}
-                        />
-                      )
-                    )}
-                  </div>
-                </>
-              )}
+        )}
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Columna izquierda: Imágenes del producto */}
+            <div className="space-y-8">
+              {/* Canvas del producto con colorización dinámica */}
+              <div className="h-[650px] w-full flex items-center justify-center">
+                {/* Canvas del ángulo actual */}
+                {angleDesigns.length > 0 && (
+                  <>
+                    <ProductCanvas
+                      key={`canvas-${currentAngle}-${selectedColor}-${canvasKeyCounter.current}`}
+                      angle={currentAngle}
+                      color={colors.find((c) => c.id === selectedColor)!.value}
+                      className="w-full h-full max-w-2xl mx-auto"
+                      design={
+                        angleDesigns.find((a) => a.angle === currentAngle)
+                          ?.design
+                      }
+                      ref={canvasRefs[currentAngle as keyof typeof canvasRefs]}
+                    />
+                    {/* Canvases ocultos para otros ángulos (necesarios para capturar imágenes) */}
+                    <div className="hidden">
+                      {ANGLES.filter((angle) => angle !== currentAngle).map(
+                        (angle) => (
+                          <ProductCanvas
+                            key={`hidden-canvas-${angle}-${selectedColor}`}
+                            angle={angle}
+                            color={
+                              colors.find((c) => c.id === selectedColor)!.value
+                            }
+                            design={
+                              angleDesigns.find((a) => a.angle === angle)
+                                ?.design
+                            }
+                            className="w-0 h-0 overflow-hidden"
+                            ref={canvasRefs[angle as keyof typeof canvasRefs]}
+                          />
+                        )
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Selector de ángulos */}
+              {renderAngleSelector()}
+
+              {/* No necesitamos miniaturas adicionales ya que usamos los ángulos */}
             </div>
 
-            {/* Selector de ángulos */}
-            {renderAngleSelector()}
+            {/* Columna derecha: Información del producto */}
+            <div className="space-y-6">
+              {/* Categoría */}
+              <div className="mb-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
+                  {product.categoriaNombre}
+                </span>
+              </div>
 
-            {/* No necesitamos miniaturas adicionales ya que usamos los ángulos */}
-          </div>
-
-          {/* Columna derecha: Información del producto */}
-          <div className="space-y-6">
-            {/* Categoría */}
-            <div className="mb-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent">
-                {product.categoriaNombre}
-              </span>
-            </div>
-
-            {/* Nombre del producto */}
-            <Text variant="h1" className="text-3xl md:text-4xl font-bold">
-              {product.nombre}
-            </Text>
-
-            {/* Precio */}
-            <Text variant="h3" className="text-2xl font-semibold text-accent">
-              ${product.disenoPersonalizado.precio.toLocaleString("es-CL")} CLP
-            </Text>
-
-            {/* Descripción */}
-            <div className="py-4 border-t border-b border-gray-200 dark:border-gray-800">
-              <Text variant="body" className="text-muted">
-                {product.descripcion ||
-                  "No hay descripción disponible para este producto."}
+              {/* Nombre del producto */}
+              <Text variant="h1" className="text-3xl md:text-4xl font-bold">
+                {product.nombre}
               </Text>
-            </div>
 
-            {/* Selector de color */}
-            {renderColorSelector()}
+              {/* Precio */}
+              <Text variant="h3" className="text-2xl font-semibold text-accent">
+                ${product.disenoPersonalizado.precio.toLocaleString("es-CL")}{" "}
+                CLP
+              </Text>
 
-            {/* Selector de talla */}
-            {renderSizeSelector()}
+              {/* Descripción */}
+              <div className="py-4 border-t border-b border-gray-200 dark:border-gray-800">
+                <Text variant="body" className="text-muted">
+                  {product.descripcion ||
+                    "No hay descripción disponible para este producto."}
+                </Text>
+              </div>
 
-            {/* Selector de cantidad */}
-            {renderQuantitySelector()}
+              {/* Selector de color */}
+              {renderColorSelector()}
 
-            {/* Botón de agregar al carrito */}
-            <button
-              onClick={handleAddToCart}
-              disabled={!selectedColor || !selectedSize}
-              className={`w-full py-3 mt-6 ${
-                !selectedColor || !selectedSize
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } text-white font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              {/* Selector de talla */}
+              {renderSizeSelector()}
+
+              {/* Selector de cantidad */}
+              {renderQuantitySelector()}
+
+              {/* Botón de agregar al carrito */}
+              <button
+                onClick={handleAddToCart}
+                disabled={!selectedColor || !selectedSize}
+                className={`w-full py-3 mt-6 ${
+                  !selectedColor || !selectedSize
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                } text-white font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              {!selectedColor || !selectedSize
-                ? "Selecciona color y talla"
-                : "Agregar al carrito"}
-            </button>
-
-            {/* Información adicional */}
-            <div
-              className={`mt-8 p-4 rounded-lg ${
-                isDarkMode ? "bg-gray-900" : "bg-gray-100"
-              }`}
-            >
-              <div className="flex items-start space-x-2">
                 <svg
-                  className="w-5 h-5 text-accent mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
-                <div>
-                  <Text variant="body" className="font-medium">
-                    Información de envío
-                  </Text>
-                  <Text variant="small" className="text-muted">
-                    Entrega estimada: 3-5 días hábiles
-                  </Text>
+                {!selectedColor || !selectedSize
+                  ? "Selecciona color y talla"
+                  : "Agregar al carrito"}
+              </button>
+
+              {/* Información adicional */}
+              <div
+                className={`mt-8 p-4 rounded-lg ${
+                  isDarkMode ? "bg-gray-900" : "bg-gray-100"
+                }`}
+              >
+                <div className="flex items-start space-x-2">
+                  <svg
+                    className="w-5 h-5 text-accent mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <Text variant="body" className="font-medium">
+                      Información de envío
+                    </Text>
+                    <Text variant="small" className="text-muted">
+                      Entrega estimada: 3-5 días hábiles
+                    </Text>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Sección de productos relacionados (opcional) */}
-        <div className="mt-20">
-          <Text variant="h2" className="text-2xl font-bold mb-8">
-            Productos relacionados
-          </Text>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {/* Aquí irían los productos relacionados */}
+          {/* Sección de productos relacionados (opcional) */}
+          <div className="mt-20">
+            <Text variant="h2" className="text-2xl font-bold mb-8">
+              Productos relacionados
+            </Text>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {/* Aquí irían los productos relacionados */}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <Modal
+        isOpen={
+          persistentCart.loading &&
+          persistentCart.actualAction === "addStandardItem"
+        }
+        onClose={() => {
+          setAddDone(false);
+          persistentCart.setActualAction("");
+        }}
+        title={addDone ? "¡Producto agregado!" : "Agregando producto"}
+        showCloseButton={addDone}
+      >
+        <div className="flex flex-col justify-center items-center gap-4 min-h-[160px]">
+          {!addDone ? (
+            <>
+              <span className="animate-bounce text-blue-500">
+                <FiShoppingCart size={48} />
+              </span>
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                Agregando producto al carrito...
+              </Text>
+              <Loader />
+            </>
+          ) : (
+            <>
+              <FaCheckCircle size={48} className="text-green-500 animate-pop" />
+              <Text
+                variant="h2"
+                className="text-xl font-semibold mb-2 text-center"
+              >
+                ¡Producto agregado!
+              </Text>
+              <Text variant="body" className="text-gray-500 text-center">
+                El producto fue agregado correctamente al carrito.
+              </Text>
+            </>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 }

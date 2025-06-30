@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, {
@@ -7,9 +8,11 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useState,
 } from "react";
 import {
   Cart,
+  CartItem,
   CartItemType,
   StandardProduct,
   CustomDesign,
@@ -18,11 +21,14 @@ import {
   CustomCartItem,
   CustomView,
 } from "../types/cart";
+import { usePersistentCartApi } from "@/hooks/usePersistentCartApi";
 import {
   DisenoPersonalizadoDTO,
   AnguloDTO,
   ElementoDTO,
 } from "../types/personalizedDesign";
+import { addThumbnailCartItem } from "@/services/thumbnailService";
+import { convertProductoToStandardProduct } from "@/utils/typeConverters";
 
 /**
  * Convierte un diseño personalizado del formato frontend (CustomDesign)
@@ -183,14 +189,14 @@ type CartAction =
       designId: string;
       status: CustomDesignStatus;
       notes?: string;
-    };
+    }
+  | { type: "SET_CART_FROM_BACKEND"; items: CartItem[] }; // <-- Agregado
 
 // Reducer para manejar las acciones del carrito
 const cartReducer = (state: Cart, action: CartAction): Cart => {
   switch (action.type) {
     case "ADD_STANDARD_ITEM": {
       const { product, quantity } = action;
-
       // Verificar si el producto ya está en el carrito
       const existingItemIndex = state.items.findIndex(
         (item) =>
@@ -202,12 +208,11 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       );
 
       if (existingItemIndex >= 0) {
-        // Actualizar cantidad si ya existe
         const updatedItems = [...state.items];
-        const existingItem = updatedItems[existingItemIndex] as {
-          quantity: number;
-        };
-        existingItem.quantity += quantity;
+        // Haz una copia del objeto antes de modificar
+        const updatedItem = { ...updatedItems[existingItemIndex] };
+        updatedItem.quantity += quantity;
+        updatedItems[existingItemIndex] = updatedItem;
 
         return {
           ...state,
@@ -338,6 +343,23 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       };
     }
 
+    case "SET_CART_FROM_BACKEND": {
+      const { items } = action;
+      // Recalcula totales
+      let totalItems = 0;
+      let totalPrice = 0;
+      items.forEach((item: any) => {
+        totalItems += item.cantidad ?? item.quantity ?? 0;
+        totalPrice += item.price;
+      });
+      return {
+        ...state,
+        items: items,
+        totalItems,
+        totalPrice,
+      };
+    }
+
     default:
       return state;
   }
@@ -356,6 +378,7 @@ interface CartContextProps {
     status: CustomDesignStatus,
     notes?: string
   ) => void;
+  persistentCart: any;
 }
 
 const CartContext = createContext<CartContextProps | undefined>(undefined);
@@ -438,34 +461,446 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window !== "undefined") {
       localStorage.setItem("cart", JSON.stringify(cart));
     }
-  }, [cart]);
+  }, [cart.items, cart]);
 
-  // Funciones para manipular el carrito
+  // --- INTEGRACIÓN CON CARRITO PERSISTENTE ---
+  const persistentCart = usePersistentCartApi();
+  const [userId, setUserId] = useState<number | null>(null);
+  const [hasInsertionOnMemoryCart, setHasInsertionOnMemoryCart] =
+    useState(false);
+  const [hasMergedCart, setHasMergedCart] = useState(false);
+  const [hasBackendInsertion, setHasBackendInsertion] = useState(false);
+
+  useEffect(() => {
+    if (persistentCart.userId !== null) {
+      setUserId(persistentCart.userId);
+    } else {
+      persistentCart.refreshCart();
+    }
+    console.log({ persistentCart });
+  }, [persistentCart]);
+
+  useEffect(() => {
+    if (cart.items.length > 0 && userId === null) {
+      setHasInsertionOnMemoryCart(true);
+    }
+  }, [cart, userId]);
+
+  useEffect(() => {
+    if (userId === null && hasMergedCart) {
+      setHasMergedCart(false);
+    }
+  }, [userId, hasMergedCart]);
+
+  // --- FUSIÓN DE CARRITOS AL INICIAR SESIÓN ---
+  // Flag para evitar merge infinito
+
+  const addThumbnailToProductCartItem = async (productItem: {
+    id: number;
+    previewImages: {
+      frente: string;
+      espalda: string;
+      izquierda: string;
+      derecha: string;
+    };
+  }) => {
+    await addThumbnailCartItem(
+      productItem.id,
+      "frente",
+      productItem.previewImages.frente
+    );
+    await addThumbnailCartItem(
+      productItem.id,
+      "espalda",
+      productItem.previewImages.espalda
+    );
+    await addThumbnailCartItem(
+      productItem.id,
+      "izquierda",
+      productItem.previewImages.izquierda
+    );
+    await addThumbnailCartItem(
+      productItem.id,
+      "derecha",
+      productItem.previewImages.derecha
+    );
+  };
+
+  useEffect(() => {
+    // Solo fusionar si hay usuario identificado, el carrito local tiene ítems y no se ha mergeado aún
+    if (
+      userId !== null &&
+      (hasInsertionOnMemoryCart ||
+        (cart.items.length === 0 &&
+          persistentCart.items.length > 0 &&
+          !hasBackendInsertion)) &&
+      !hasMergedCart
+    ) {
+      const mergeCarts = async () => {
+        // 1. Obtener ítems del backend (persistente)
+        await persistentCart.refreshCart();
+        let backendItems = persistentCart.items;
+
+        // 2. Fusionar ítems locales con los del backend
+        if (cart.items.length > 0) {
+          await Promise.all(
+            cart.items.map(async (item) => {
+              // Fusionar productos estándar
+              if (
+                item.type === CartItemType.STANDARD ||
+                item.type === CartItemType.PRODUCT
+              ) {
+                const color = item.product?.color ?? "";
+                const size = item.product?.size ?? "";
+                const exists = backendItems.some(
+                  (b) =>
+                    b.productoId === Number(item.product?.id) &&
+                    b.colorId === color &&
+                    b.tallaId === size
+                );
+                if (!exists) {
+                  backendItems =
+                    (await persistentCart.addProductItem({
+                      productId: Number(item.product?.id),
+                      quantity: item.quantity,
+                      color,
+                      size,
+                      tipoItemId: 1,
+                    })) ?? [];
+                  const updatedItem: any = backendItems.find(
+                    (b: any) => b.productoId === item.product?.id
+                  );
+                  if (updatedItem) {
+                    const { id } = updatedItem;
+                    const itemForCreateThumbnail: any = {
+                      id,
+                      previewImages: item.product?.previewImages,
+                    };
+                    await addThumbnailToProductCartItem(itemForCreateThumbnail);
+                  }
+                }
+                // else {
+                //   // Si existe, suma cantidades
+                //   const backendItem = backendItems.find(
+                //     (b) =>
+                //       b.productoId === item.product?.id &&
+                //       b.colorId === color &&
+                //       b.tallaId === size
+                //   );
+                //   if (backendItem) {
+                //     await persistentCart.updateQuantity(
+                //       Number(backendItem.id),
+                //       item.quantity + backendItem.cantidad
+                //     );
+                //   }
+                // }
+              }
+              // Fusionar diseños personalizados
+              if (item.type === CartItemType.CUSTOM) {
+                const exists = backendItems.some(
+                  (b) => b.disenoPersonalizadoId === Number(item.design?.id)
+                );
+                if (!exists) {
+                  const designDTO = convertCustomDesignToDTO(
+                    item.design!,
+                    userId
+                  );
+                  await persistentCart.addCustomItem({
+                    design: designDTO,
+                    quantity: item.quantity,
+                    tipoItemId: 2,
+                  });
+                }
+                // else {
+                //   // Si existe, suma cantidades
+                //   const backendItem = backendItems.find(
+                //     (b) => b.disenoPersonalizadoId === Number(item.design?.id)
+                //   );
+                //   if (backendItem) {
+                //     await persistentCart.updateQuantity(
+                //       Number(backendItem.id),
+                //       item.quantity + backendItem.cantidad
+                //     );
+                //   }
+                // }
+              }
+            })
+          );
+        }
+        // 3. Refrescar el persistente y sincronizar el local con el backend
+        const updatedItems = (await persistentCart.refreshCart()) ?? [];
+        // Adaptar los items del backend al formato CartItem (memoria)
+        if (updatedItems.length > 0) {
+          const adaptedItems: CartItem[] = updatedItems
+            .map((b: any) => {
+              if (b.productoId) {
+                // Producto estándar
+                const standardProduct = convertProductoToStandardProduct(
+                  {
+                    ...b.producto!,
+                    thumbnails: b.thumbnails,
+                  },
+                  {
+                    colorId: b.colorId,
+                    tallaId: b.tallaId,
+                    precioUnitario: b.precioUnitario,
+                  }
+                );
+                return {
+                  id: b.id?.toString() ?? crypto.randomUUID(),
+                  type: CartItemType.STANDARD,
+                  productId: b.productoId?.toString(),
+                  color: b.colorId,
+                  size: b.tallaId,
+                  quantity: b.cantidad,
+                  unitPrice: b.precioUnitario,
+                  price: b.subtotal,
+                  // product: puedes mapear si tienes info suficiente
+                  product: standardProduct,
+                };
+              } else if (b.disenoPersonalizadoId) {
+                // Diseño personalizado
+                const emptyAngle = {
+                  text: "",
+                  image: null,
+                  textFont: "",
+                  textColor: "",
+                  textSize: 0,
+                  textPositionX: 0,
+                  textPositionY: 0,
+                  imagePositionX: 0,
+                  imagePositionY: 0,
+                  imageWidth: 0,
+                  imageHeight: 0,
+                  previewImage: "",
+                };
+                const getAngleFormat = (angle: string) => {
+                  const angleDTO = b.disenoPersonalizado.angulos.find(
+                    (a: AnguloDTO) => a.nombreAngulo === angle
+                  );
+                  return {
+                    text: angleDTO?.elemento.propiedadesElemento.contenido,
+                    image: angleDTO?.elemento.propiedadesElemento.urlImagen,
+                    textFont: angleDTO?.elemento.propiedadesElemento.fontFamily,
+                    textColor: angleDTO?.elemento.propiedadesElemento.color,
+                    textSize: angleDTO?.elemento.propiedadesElemento.fontSize,
+                    textPositionX:
+                      angleDTO?.elemento.propiedadesDiseno.posicionX,
+                    textPositionY:
+                      angleDTO?.elemento.propiedadesDiseno.posicionY,
+                    imagePositionX:
+                      angleDTO?.elemento.propiedadesDiseno.posicionX,
+                    imagePositionY:
+                      angleDTO?.elemento.propiedadesDiseno.posicionY,
+                    imageWidth: angleDTO?.elemento.propiedadesDiseno.anchura,
+                    imageHeight: angleDTO?.elemento.propiedadesDiseno.altura,
+                    previewImage: angleDTO?.thumbnailUrl,
+                  };
+                };
+                const convertedDesign: CustomDesign = {
+                  id: b.disenoPersonalizadoId?.toString(),
+                  name: b.disenoPersonalizado.nombre,
+                  front: b.disenoPersonalizado.angulos.find(
+                    (a: AnguloDTO) => a.nombreAngulo === "Frente"
+                  )
+                    ? getAngleFormat("Frente")
+                    : emptyAngle,
+                  back: b.disenoPersonalizado.angulos.find(
+                    (a: AnguloDTO) => a.nombreAngulo === "Espalda"
+                  )
+                    ? getAngleFormat("Espalda")
+                    : emptyAngle,
+                  left: b.disenoPersonalizado.angulos.find(
+                    (a: AnguloDTO) => a.nombreAngulo === "Izquierda"
+                  )
+                    ? getAngleFormat("Izquierda")
+                    : emptyAngle,
+                  right: b.disenoPersonalizado.angulos.find(
+                    (a: AnguloDTO) => a.nombreAngulo === "Derecha"
+                  )
+                    ? getAngleFormat("Derecha")
+                    : emptyAngle,
+                  color: b.colorId,
+                  size: b.tallaId,
+                  status: b.status,
+                  rejectionReason: b.rejectionReason,
+                  modificationNotes: b.modificationNotes,
+                  price: b.subtotal,
+                  createdAt: b.creadoEn,
+                  updatedAt: b.actualizadoEn,
+                };
+                return {
+                  id: b.id?.toString() ?? crypto.randomUUID(),
+                  type: CartItemType.CUSTOM,
+                  designId: b.disenoPersonalizadoId?.toString(),
+                  quantity: b.cantidad,
+                  unitPrice: b.precioUnitario,
+                  price: b.subtotal, // O subtotal
+                  // design: puedes mapear si tienes info suficiente
+                  design: convertedDesign,
+                };
+              }
+              // Fallback: ignora items no reconocidos
+              return null;
+            })
+            .filter(Boolean) as CartItem[];
+          console.log({ persistentCartItems: updatedItems });
+          console.log({ adaptedItems });
+          dispatch({ type: "SET_CART_FROM_BACKEND", items: adaptedItems });
+        }
+        if (updatedItems.length > 0 || cart.items.length > 0) {
+          setHasMergedCart(true); // Marcar como mergeado
+        }
+      };
+      mergeCarts();
+      // Si el usuario hace logout, resetea el flag
+    }
+  }, [userId, cart.items, persistentCart, hasMergedCart]);
+
+  // --- Funciones para manipular el carrito ---
+  // Añadir producto estándar
+  const waitForProductInCart = async (
+    product: StandardProduct,
+    maxRetries = 10,
+    delayMs = 200
+  ) => {
+    for (let i = 0; i < maxRetries; i++) {
+      const items = (await persistentCart.refreshCart()) ?? [];
+      const found = items.find(
+        (b: any) =>
+          b.productoId === Number(product.id) &&
+          b.colorId === product.color &&
+          b.tallaId === product.size
+      );
+      if (found) return found;
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+    return undefined;
+  };
+
   const addStandardItem = useCallback(
-    (product: StandardProduct, quantity: number) => {
-      dispatch({ type: "ADD_STANDARD_ITEM", product, quantity });
+    async (product: StandardProduct, quantity: number) => {
+      try {
+        persistentCart.setLoading(true);
+        persistentCart.setActualAction("addStandardItem");
+        if (userId !== null) {
+          await persistentCart.addProductItem({
+            productId: Number(product.id),
+            quantity,
+            color: product.color,
+            size: product.size,
+            tipoItemId: 1,
+          });
+          setHasBackendInsertion(true);
+          const updatedItem = await waitForProductInCart(product);
+          if (updatedItem) {
+            const { id } = updatedItem;
+            const itemForCreateThumbnail: any = {
+              id,
+              previewImages: product.previewImages,
+            };
+            if (
+              !persistentCart.items.some(
+                (item: any) =>
+                  item.productoId === Number(product.id) &&
+                  item.colorId === product.color &&
+                  item.tallaId === product.size
+              )
+            ) {
+              await addThumbnailToProductCartItem(itemForCreateThumbnail);
+            }
+          }
+          // Refresca para asegurar consistencia final
+          await persistentCart.refreshCart();
+        }
+        dispatch({ type: "ADD_STANDARD_ITEM", product, quantity });
+      } catch (error) {
+        console.error("Error al agregar producto estándar:", error);
+      } finally {
+        persistentCart.setLoading(false);
+        persistentCart.setActualAction("");
+      }
     },
-    []
+    [userId, persistentCart, dispatch]
   );
 
+  // Añadir diseño personalizado
   const addCustomItem = useCallback(
-    (design: CustomDesign, quantity: number) => {
-      dispatch({ type: "ADD_CUSTOM_ITEM", design, quantity });
+    async (design: CustomDesign, quantity: number) => {
+      // Siempre actualiza el local primero para una UI reactiva
+      try {
+        persistentCart.setLoading(true);
+        persistentCart.setActualAction("addCustomItem");
+        if (userId !== null) {
+          const designDTO = convertCustomDesignToDTO(design, userId);
+          await persistentCart.addCustomItem({
+            design: designDTO,
+            quantity,
+            tipoItemId: 2,
+          });
+          await persistentCart.refreshCart();
+        }
+        dispatch({ type: "ADD_CUSTOM_ITEM", design, quantity });
+      } catch (error) {
+        console.error("Error al agregar diseño personalizado:", error);
+      } finally {
+        persistentCart.setLoading(false);
+        persistentCart.setActualAction("");
+      }
     },
-    []
+    [userId, persistentCart, dispatch]
   );
 
-  const removeItem = useCallback((itemIndex: number) => {
-    dispatch({ type: "REMOVE_ITEM", itemIndex });
-  }, []);
+  // Eliminar ítem (por índice en local, por objeto en backend)
+  const removeItem = useCallback(
+    async (itemIndex: number) => {
+      try {
+        persistentCart.setLoading(true);
+        persistentCart.setActualAction("removeItem");
+        // Siempre actualiza el local primero para una UI reactiva
+        if (userId !== null) {
+          const backendItem = persistentCart.items[itemIndex];
+          if (backendItem) {
+            await persistentCart.removeItem(backendItem);
+            await persistentCart.refreshCart();
+          }
+        }
+        dispatch({ type: "REMOVE_ITEM", itemIndex });
+      } catch (error) {
+        console.error("Error al eliminar ítem:", error);
+      } finally {
+        persistentCart.setLoading(false);
+        persistentCart.setActualAction("");
+      }
+    },
+    [userId, persistentCart, dispatch]
+  );
 
-  const updateQuantity = useCallback((itemIndex: number, quantity: number) => {
-    dispatch({ type: "UPDATE_QUANTITY", itemIndex, quantity });
-  }, []);
+  // Actualizar cantidad (solo local, o implementar en backend si existe endpoint)
+  const updateQuantity = useCallback(
+    async (itemIndex: number, quantity: number) => {
+      // Siempre actualiza el local primero para una UI reactiva
+      if (userId !== null) {
+        // (Opcional: implementar updateQuantity en backend si existe)
+        // Por ahora, eliminar y volver a agregar con nueva cantidad
+        const backendItem = persistentCart.items[itemIndex];
+        if (backendItem) {
+          await persistentCart.updateQuantity(Number(backendItem.id), quantity);
+          await persistentCart.refreshCart();
+        }
+      }
+      dispatch({ type: "UPDATE_QUANTITY", itemIndex, quantity });
+    },
+    [userId, persistentCart, dispatch]
+  );
 
-  const clearCart = useCallback(() => {
+  // Vaciar carrito
+  const clearCart = useCallback(async () => {
+    if (userId !== null) {
+      await persistentCart.clearCart();
+    }
     dispatch({ type: "CLEAR_CART" });
-  }, []);
+  }, [userId, persistentCart, dispatch]);
 
   const updateCustomDesignStatus = useCallback(
     (designId: string, status: CustomDesignStatus, notes?: string) => {
@@ -489,6 +924,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       updateQuantity,
       clearCart,
       updateCustomDesignStatus,
+      persistentCart,
     }),
     [
       cart,
@@ -498,6 +934,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       updateQuantity,
       clearCart,
       updateCustomDesignStatus,
+      persistentCart,
     ]
   );
 
