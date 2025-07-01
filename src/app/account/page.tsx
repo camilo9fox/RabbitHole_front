@@ -149,6 +149,10 @@ export default function AccountPage() {
     }
   };
 
+  const regionExistsOnArrRegions = (region: string) => {
+    return chileanRegions.some((r) => r === region);
+  };
+
   // Si está cargando la sesión, mostramos un loader
   if (status === "loading") {
     return (
@@ -456,13 +460,7 @@ export default function AccountPage() {
               <select
                 id="ciudad"
                 name="ciudad"
-                value={
-                  citiesByRegion[userData?.estado ?? "Arica y Parinacota"].some(
-                    (city) => city === userData?.ciudad
-                  )
-                    ? userData?.ciudad
-                    : ""
-                }
+                value={userData?.ciudad || ""}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 rounded-md border ${
@@ -472,13 +470,15 @@ export default function AccountPage() {
                 } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
               >
                 <option value="">Seleccionar ciudad</option>
-                {citiesByRegion[userData?.estado ?? "Arica y Parinacota"].map(
-                  (city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  )
-                )}
+                {regionExistsOnArrRegions(userData?.estado)
+                  ? citiesByRegion[
+                      userData?.estado ?? "Arica y Parinacota"
+                    ].map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))
+                  : ""}
               </select>
             </div>
 

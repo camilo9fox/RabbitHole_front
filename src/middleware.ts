@@ -10,7 +10,7 @@ const protectedRoutes = [
 // Endpoint backend para validar el token
 const VALIDATE_TOKEN_URL =
   process.env.NEXT_PUBLIC_VALIDATE_TOKEN_URL ??
-  "http://localhost:8081/api/usuarios/validate-token";
+  "http://localhost:8080/api/usuarios/validate-token";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -26,10 +26,14 @@ export async function middleware(request: NextRequest) {
       const data = await response.json();
       if (data.message.includes("expired") && !pathname.includes("/auth")) {
         // Redirige a una página cliente donde se ejecuta signOut
+        document.cookie =
+          "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         return NextResponse.redirect(new URL("/auth/expired", request.url));
       }
     } catch {
       // Si no se puede validar, redirige igual
+      document.cookie =
+        "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       return NextResponse.redirect(new URL("/auth/expired", request.url));
     }
   }

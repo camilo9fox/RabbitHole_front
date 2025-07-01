@@ -6,8 +6,6 @@ import { redirect } from "next/navigation";
 export default function ExpiredPage() {
   useEffect(() => {
     localStorage.removeItem("authToken");
-    document.cookie =
-      "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     signOut();
     setTimeout(() => {
       redirect("/home");
