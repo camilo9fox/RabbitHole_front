@@ -74,7 +74,10 @@ jobs:
             # 3) recreate container
             docker stop front || true && docker rm front || true
             docker run -d --name front \
-              -p 80:3000 \
+              -p 127.0.0.1:3000:3000 \
               --restart=always \
               --env-file ~/front.env \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            # 4) reload nginx to pick up new container or renewed certificates
+            sudo systemctl reload nginx
