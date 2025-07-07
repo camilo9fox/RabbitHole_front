@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com', 'i.ibb.co', 'res.cloudinary.com'],
+    domains: ["images.unsplash.com", "i.ibb.co", "res.cloudinary.com"],
+    unoptimized: true,
   },
   webpack: (config, { isServer }) => {
     // Solución para el problema con el módulo 'canvas' en el lado del cliente
@@ -13,6 +14,6 @@ const nextConfig = {
     }
     return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
