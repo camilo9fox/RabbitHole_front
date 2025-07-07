@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "../config/apiClient";
 import { API_ROUTES } from "../config/apiRoutes";
 
 export interface OrderUser {
@@ -43,7 +43,7 @@ export interface InfoPago {
 
 export const createOrderUser = async (order: OrderUser) => {
   try {
-    const response = await axios.post(API_ROUTES.orders, order);
+    const response = await apiClient.post(API_ROUTES.orders, order);
     return response.data;
   } catch (error) {
     console.error("Error al crear orden:", error);
@@ -53,7 +53,7 @@ export const createOrderUser = async (order: OrderUser) => {
 
 export const createOrderAnonymous = async (order: OrderAnonymous) => {
   try {
-    const response = await axios.post(API_ROUTES.orders + "/anonima", order);
+    const response = await apiClient.post(API_ROUTES.orders + "/anonima", order);
     return response.data;
   } catch (error) {
     console.error("Error al crear orden:", error);
@@ -63,7 +63,7 @@ export const createOrderAnonymous = async (order: OrderAnonymous) => {
 
 export const getOrderById = async (orderId: number) => {
   try {
-    const response = await axios.get(API_ROUTES.orders + "/" + orderId);
+    const response = await apiClient.get(API_ROUTES.orders + "/" + orderId);
     return response.data;
   } catch (error) {
     console.error("Error al obtener orden:", error);
@@ -73,7 +73,7 @@ export const getOrderById = async (orderId: number) => {
 
 export const getOrdersByUserID = async (userId: number) => {
   try {
-    const response = await axios.get(API_ROUTES.orders + "/usuario/" + userId);
+    const response = await apiClient.get(API_ROUTES.orders + "/usuario/" + userId);
     return response.data;
   } catch (error) {
     console.error("Error al obtener ordenes:", error);
@@ -83,7 +83,7 @@ export const getOrdersByUserID = async (userId: number) => {
 
 export const getAllOrders = async () => {
   try {
-    const response = await axios.get(API_ROUTES.orders);
+    const response = await apiClient.get(API_ROUTES.orders);
     return response.data;
   } catch (error) {
     console.error("Error al obtener ordenes:", error);
@@ -93,7 +93,7 @@ export const getAllOrders = async () => {
 
 export const updateOrderStatus = async (orderId: number, statusId: number) => {
   try {
-    const response = await axios.put(
+    const response = await apiClient.put(
       API_ROUTES.orders + "/" + orderId + "/estado?estadoId=" + statusId
     );
     return response.data;
@@ -105,7 +105,7 @@ export const updateOrderStatus = async (orderId: number, statusId: number) => {
 
 export const getOrderStates = async () => {
   try {
-    const response = await axios.get(API_ROUTES.states + "-orden");
+    const response = await apiClient.get(API_ROUTES.states + "-orden");
     return response.data;
   } catch (error) {
     console.error("Error al obtener estados de orden:", error);

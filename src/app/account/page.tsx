@@ -16,7 +16,7 @@ import {
   Map,
 } from "lucide-react";
 import { API_ROUTES } from "@/config/apiRoutes";
-import axios from "axios";
+import apiClient from "@/config/apiClient";
 import { chileanRegions, citiesByRegion } from "@/utils/chileLocations";
 
 // Interfaz para los datos del perfil de usuario en nuestra aplicación
@@ -67,7 +67,7 @@ export default function AccountPage() {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         API_ROUTES.users + "/oid/" + session!.profile!.oid,
         {
           headers: {
@@ -86,7 +86,7 @@ export default function AccountPage() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, admin, ...userDataWithoutId } = userData;
     try {
-      const response = await axios.put(
+      const response = await apiClient.put(
         API_ROUTES.users + "/" + id,
         userDataWithoutId,
         {

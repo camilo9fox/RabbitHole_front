@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "../config/apiClient";
 import { API_ROUTES } from "../config/apiRoutes";
 
 export type newProductItem = {
@@ -19,7 +19,7 @@ export type newCustomItem = {
 
 export const initCart = async (userId: number) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       API_ROUTES.cart + "/usuario/" + userId + "/activo"
     );
     return response.data;
@@ -31,7 +31,7 @@ export const initCart = async (userId: number) => {
 
 export const getCartByID = async (cartId: number) => {
   try {
-    const response = await axios.get(API_ROUTES.cart + "/" + cartId);
+    const response = await apiClient.get(API_ROUTES.cart + "/" + cartId);
     return response.data;
   } catch (error) {
     console.error("Error al obtener carrito:", error);
@@ -44,7 +44,7 @@ export const addProductToCart = async (
   cartId: number
 ) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       API_ROUTES.cart + "/" + cartId + "/productos",
       newProductItem
     );
@@ -60,7 +60,7 @@ export const addCustomItemToCart = async (
   cartId: number
 ) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       API_ROUTES.cart + "/" + cartId + "/disenos",
       newCustomItem
     );
@@ -77,7 +77,7 @@ export const updateItemQuantity = async (
   quantity: number
 ) => {
   try {
-    const response = await axios.put(
+    const response = await apiClient.put(
       API_ROUTES.cart +
         "/" +
         cartId +
@@ -98,7 +98,7 @@ export const deleteItemFromCart = async (
   cartItemId: number
 ) => {
   try {
-    const response = await axios.delete(
+    const response = await apiClient.delete(
       API_ROUTES.cart + "/" + cartId + "/items/" + cartItemId
     );
     return response.data;
@@ -110,7 +110,7 @@ export const deleteItemFromCart = async (
 
 export const emptyCart = async (cartId: number) => {
   try {
-    const response = await axios.delete(
+    const response = await apiClient.delete(
       API_ROUTES.cart + "/" + cartId + "/items"
     );
     return response.data;
@@ -122,7 +122,7 @@ export const emptyCart = async (cartId: number) => {
 
 export const deleteCart = async (cartId: number) => {
   try {
-    const response = await axios.delete(API_ROUTES.cart + "/" + cartId);
+    const response = await apiClient.delete(API_ROUTES.cart + "/" + cartId);
     return response.data;
   } catch (error) {
     console.error("Error al eliminar carrito:", error);

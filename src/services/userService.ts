@@ -1,9 +1,9 @@
-import axios from "axios";
+import apiClient from "../config/apiClient";
 import { API_ROUTES } from "../config/apiRoutes";
 
 export const validateToken = async (token: string) => {
   try {
-    const response = await axios.post(API_ROUTES.users + "/validate-token", {
+    const response = await apiClient.post(API_ROUTES.users + "/validate-token", {
       token,
     });
     return response.data;

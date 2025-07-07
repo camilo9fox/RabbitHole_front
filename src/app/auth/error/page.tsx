@@ -1,32 +1,45 @@
-'use client';
+"use client";
+export const dynamic = "force-dynamic";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Text from '@/components/commons/atoms/Text';
-import Button from '@/components/commons/atoms/Button';
-import { AlertTriangle, Home, ArrowLeft, KeyRound } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Text from "@/components/commons/atoms/Text";
+import Button from "@/components/commons/atoms/Button";
+import { AlertTriangle, Home, ArrowLeft, KeyRound } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function AuthError() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const error = searchParams.get('error');
-  const errorDescription = searchParams.get('error_description');
-  
+  const [query, setQuery] = useState<{
+    error?: string;
+    error_description?: string;
+  }>({});
+
+  // Read query params client-side to avoid SSR issues
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    setQuery({
+      error: sp.get("error") || undefined,
+      error_description: sp.get("error_description") || undefined,
+    });
+  }, []);
+
+  const errorDescription = query.error_description;
+
   // Para evitar problemas de hidratación, inicializamos con null y actualizamos en useEffect
   const [isPasswordReset, setIsPasswordReset] = useState<boolean | null>(null);
-  
+
   useEffect(() => {
     // Detectar si el error es de contraseña olvidada (AADB2C90118)
-    if (errorDescription?.includes('AADB2C90118')) {
+    if (errorDescription?.includes("AADB2C90118")) {
       setIsPasswordReset(true);
-      
+
       // Redireccionar automáticamente al flujo de restablecimiento de contraseña
       // con un pequeño retraso para que el usuario vea brevemente el mensaje
       const timer = setTimeout(() => {
         handlePasswordReset();
       }, 1500);
-      
+
       return () => clearTimeout(timer);
     } else {
       setIsPasswordReset(false);
@@ -35,35 +48,37 @@ export default function AuthError() {
 
   // Mapeo de errores a mensajes amigables
   const errorMessages: Record<string, string> = {
-    Configuration: 'Hay un problema con la configuración del servidor de autenticación.',
-    AccessDenied: 'No tienes permiso para acceder a este recurso.',
-    Verification: 'El enlace de verificación ha expirado o ya ha sido utilizado.',
-    Default: 'Ha ocurrido un error durante la autenticación.',
-    PasswordReset: 'Has indicado que olvidaste tu contraseña.'
+    Configuration:
+      "Hay un problema con la configuración del servidor de autenticación.",
+    AccessDenied: "No tienes permiso para acceder a este recurso.",
+    Verification:
+      "El enlace de verificación ha expirado o ya ha sido utilizado.",
+    Default: "Ha ocurrido un error durante la autenticación.",
+    PasswordReset: "Has indicado que olvidaste tu contraseña.",
   };
 
   // Determinamos el mensaje de error apropiado
   let errorMessage;
-  
-  if (isPasswordReset === true && error === 'AccessDenied') {
+
+  if (isPasswordReset === true && query.error === "AccessDenied") {
     errorMessage = errorMessages.PasswordReset;
-  } else if (error) {
-    errorMessage = errorMessages[error] || errorMessages.Default;
+  } else if (query.error) {
+    errorMessage = errorMessages[query.error] || errorMessages.Default;
   } else {
     errorMessage = errorMessages.Default;
   }
-  
+
   // Función para manejar el restablecimiento de contraseña
   const handlePasswordReset = async () => {
-    console.log('Iniciando flujo de restablecimiento de contraseña...');
+    console.log("Iniciando flujo de restablecimiento de contraseña...");
     // Usamos el proveedor azure-ad-reset que tiene la URL directa configurada
     try {
-      await signIn('azure-ad-reset', { 
-        callbackUrl: '/home',
-        redirect: true
+      await signIn("azure-ad-reset", {
+        callbackUrl: "/home",
+        redirect: true,
       });
     } catch (error) {
-      console.error('Error al iniciar el flujo de restablecimiento:', error);
+      console.error("Error al iniciar el flujo de restablecimiento:", error);
     }
   };
 
@@ -79,11 +94,11 @@ export default function AuthError() {
             )}
           </div>
           <Text variant="h1" className="text-3xl font-bold mb-2">
-            {isPasswordReset ? 'Restablecimiento de Contraseña' : 'Error de Autenticación'}
+            {isPasswordReset
+              ? "Restablecimiento de Contraseña"
+              : "Error de Autenticación"}
           </Text>
-          <Text variant="body">
-            {errorMessage}
-          </Text>
+          <Text variant="body">{errorMessage}</Text>
           {isPasswordReset && (
             <Text variant="body" className="mt-2">
               Redirigiendo al flujo de restablecimiento de contraseña...
@@ -105,7 +120,7 @@ export default function AuthError() {
             <Button
               variant="primary"
               className="w-full flex items-center justify-center gap-2 py-3"
-              onClick={() => router.push('/auth/signin')}
+              onClick={() => router.push("/auth/signin")}
             >
               <ArrowLeft className="h-5 w-5" />
               Volver a iniciar sesión
@@ -116,7 +131,7 @@ export default function AuthError() {
             <Button
               variant="secondary"
               className="w-full flex items-center justify-center gap-2 py-2"
-              onClick={() => router.push('/home')}
+              onClick={() => router.push("/home")}
             >
               <Home className="h-5 w-5" />
               Volver al inicio

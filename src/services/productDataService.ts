@@ -11,14 +11,14 @@ import {
 } from "@/types/productData";
 
 import { API_ROUTES } from "@/config/apiRoutes";
-import axios from "axios";
+import apiClient from "@/config/apiClient";
 
 /**
  * Obtiene los colores disponibles desde el backend
  */
 export const fetchColors = async (): Promise<ColorOption[]> => {
   try {
-    const response = await axios.get(API_ROUTES.colors);
+    const response = await apiClient.get(API_ROUTES.colors);
 
     const data = response.data;
 
@@ -41,7 +41,7 @@ export const fetchColors = async (): Promise<ColorOption[]> => {
  */
 export const fetchSizes = async (): Promise<SizeOption[]> => {
   try {
-    const response = await axios.get(API_ROUTES.sizes);
+    const response = await apiClient.get(API_ROUTES.sizes);
 
     const data = response.data;
 
@@ -62,7 +62,7 @@ export const fetchSizes = async (): Promise<SizeOption[]> => {
  */
 export const fetchFonts = async (): Promise<FontOption[]> => {
   try {
-    const response = await axios.get(API_ROUTES.fonts);
+    const response = await apiClient.get(API_ROUTES.fonts);
 
     const data = response.data;
 
@@ -80,7 +80,7 @@ export const fetchFonts = async (): Promise<FontOption[]> => {
 
 export const fetchCategories = async (): Promise<ProductCategoryDTO[]> => {
   try {
-    const response = await axios.get(API_ROUTES.categories);
+    const response = await apiClient.get(API_ROUTES.categories);
     return response.data;
   } catch (error) {
     console.error("Error al obtener categorías:", error);
@@ -92,7 +92,7 @@ export const fetchProducts = async (
   queryParam?: string
 ): Promise<ProductOnGetDTO[]> => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       API_ROUTES.products + (queryParam ? `?${queryParam}` : "")
     );
     return response.data.productos;
@@ -106,7 +106,7 @@ export const fetchProductById = async (
   id: number
 ): Promise<ProductOnGetDTO> => {
   try {
-    const response = await axios.get(`${API_ROUTES.products}/${id}`);
+    const response = await apiClient.get(`${API_ROUTES.products}/${id}`);
     return response.data;
   } catch (error) {
     console.error("Error al obtener producto por ID:", error);
@@ -116,7 +116,7 @@ export const fetchProductById = async (
 
 export const createProduct = async (product: ProductOnCreatePutDTO) => {
   try {
-    const response = await axios.post(API_ROUTES.products, product);
+    const response = await apiClient.post(API_ROUTES.products, product);
     return response.data;
   } catch (error) {
     console.error("Error al crear producto:", error);
@@ -126,7 +126,7 @@ export const createProduct = async (product: ProductOnCreatePutDTO) => {
 
 export const updateProduct = async (product: ProductOnCreatePutDTO) => {
   try {
-    const response = await axios.put(
+    const response = await apiClient.put(
       `${API_ROUTES.products}/${product.id}`,
       product
     );
@@ -139,9 +139,13 @@ export const updateProduct = async (product: ProductOnCreatePutDTO) => {
 
 export const deleteProduct = async (id: number) => {
   try {
-    const response = await axios.delete(`${API_ROUTES.products}/${id}`);
+    const response = await apiClient.delete(`${API_ROUTES.products}/${id}`);
     return response.data;
-  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error.status === 409) {
+      return error.response.data;
+    }
     console.error("Error al eliminar producto:", error);
     throw error;
   }
@@ -149,7 +153,7 @@ export const deleteProduct = async (id: number) => {
 
 export const toggleActiveProduct = async (id: number) => {
   try {
-    const response = await axios.patch(
+    const response = await apiClient.patch(
       `${API_ROUTES.products}/${id}/toggle-activo`
     );
     return response.data;

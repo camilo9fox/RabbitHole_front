@@ -42,7 +42,7 @@ import { ProductOnCreatePutDTO } from "@/types/productData";
 import Modal from "../commons/organisms/Modal";
 import Loader from "../commons/atoms/Loader";
 import { FiShoppingCart } from "react-icons/fi";
-import { FaCheckCircle } from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 // Interfaces
 interface ViewCustomization {
@@ -116,7 +116,6 @@ const CustomizeHTML = () => {
     console.log({ sizes });
     console.log({ fonts });
   }, [colors, sizes, fonts]);
-
   const isDarkMode = resolvedTheme === "dark";
 
   // Referencias para animaciones
@@ -131,9 +130,14 @@ const CustomizeHTML = () => {
 
   // Contexto del carrito
   const { addCustomItem, persistentCart } = useCart();
-
+  const [isOpenModalCreateProduct, setIsOpenModalCreateProduct] =
+    useState(false);
+  const [createProductStatus, setCreateProductStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   // Estados
   const [isPageMounted, setIsPageMounted] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
 
   // Formulario con React Hook Form
   const methods = useForm<CustomizationOptions>({
@@ -230,6 +234,7 @@ const CustomizeHTML = () => {
     // Añadir costo por texto (1000 pesos si hay texto en cualquier vista)
     const hasAnyText = Object.values(formValues).some(
       (view) =>
+        view &&
         typeof view === "object" &&
         "text" in view &&
         view.text &&
@@ -242,7 +247,10 @@ const CustomizeHTML = () => {
     // Añadir costo por imagen (2000 pesos si hay imagen en cualquier vista)
     const hasAnyImage = Object.values(formValues).some(
       (view) =>
-        typeof view === "object" && "image" in view && view.image !== null
+        view &&
+        typeof view === "object" &&
+        "image" in view &&
+        view.image !== null
     );
     if (hasAnyImage) {
       totalPrice += 2000;
@@ -251,7 +259,10 @@ const CustomizeHTML = () => {
     return totalPrice;
   };
 
-  const totalPrice = calculateTotalPrice();
+  useEffect(() => {
+    const newTotalPrice = calculateTotalPrice();
+    setTotalPrice(newTotalPrice);
+  }, [formValues]);
 
   // Función para formatear precio en pesos chilenos
   const formatPrice = (price: number) => {
@@ -445,6 +456,8 @@ const CustomizeHTML = () => {
     console.log("Formulario válido, continuando...");
 
     if (isAdmin) {
+      setIsOpenModalCreateProduct(true);
+      setCreateProductStatus("loading");
       // Verificar qué vistas tienen personalización
       const frontHasCustomization = hasCustomizationInView("front");
       const backHasCustomization = hasCustomizationInView("back");
@@ -634,8 +647,9 @@ const CustomizeHTML = () => {
             console.log("Thumbnail generado desde la vista:", viewToShow);
 
             // Finalizar el guardado del producto con el thumbnail generado
-            finishProductSave(thumbnailUrl, currentViewValue);
+            await finishProductSave(thumbnailUrl, currentViewValue);
           } catch (error) {
+            setCreateProductStatus("error");
             console.error("Error al generar el thumbnail:", error);
             toast.error(
               "Ocurrió un error al generar la miniatura del producto"
@@ -763,7 +777,7 @@ const CustomizeHTML = () => {
             await updateProduct(productDTO);
           }
         }
-
+        setCreateProductStatus("success");
         toast.success("Producto actualizado correctamente");
       } else {
         // Crear nuevo producto
@@ -800,18 +814,19 @@ const CustomizeHTML = () => {
             id: newProduct.id.toString(), // Usamos el ID de la API
           };
           saveAdminProduct(localProductData);
+          setCreateProductStatus("success");
         } else {
+          setCreateProductStatus("error");
           throw new Error("Error al crear el diseño personalizado");
         }
 
         toast.success("Producto creado correctamente");
       }
-
-      // Redireccionar después de guardar
       setTimeout(() => {
         router.push("/admin/products");
-      }, 1000); // Pequeño retraso para que el usuario vea el mensaje de éxito
+      }, 2000);
     } catch (error: unknown) {
+      setCreateProductStatus("error");
       console.error("Error al guardar producto:", error);
       toast.error(
         productId
@@ -1833,6 +1848,63 @@ const CustomizeHTML = () => {
               </Text>
               <Text variant="body" className="text-gray-500 text-center">
                 El diseño personalizado fue agregado correctamente al carrito.
+              </Text>
+            </>
+          )}
+        </div>
+      </Modal>
+      <Modal
+        isOpen={isOpenModalCreateProduct && createProductStatus !== "idle"}
+        onClose={() => setIsOpenModalCreateProduct(false)}
+        title=""
+        showCloseButton={
+          createProductStatus !== "loading" && createProductStatus !== "idle"
+        }
+      >
+        <div className="flex flex-col items-center justify-center gap-4 min-h-[200px]">
+          {createProductStatus === "loading" && (
+            <>
+              <span className="text-blue-600 animate-bounce">
+                <FiShoppingCart size={56} />
+              </span>
+              <Text variant="h2" className="text-xl font-semibold text-center">
+                {productId ? "Actualizando producto…" : "Creando producto…"}
+              </Text>
+              <Loader />
+            </>
+          )}
+
+          {createProductStatus === "error" && (
+            <>
+              <FaTimesCircle size={56} className="text-red-500 animate-pulse" />
+              <Text
+                variant="h2"
+                className="text-xl font-semibold text-red-600 text-center"
+              >
+                ¡Ocurrió un error!
+              </Text>
+              <Text
+                variant="body"
+                className="text-gray-500 text-center max-w-xs"
+              >
+                No se pudo {productId ? "actualizar" : "crear"} el producto en
+                este momento. Inténtalo nuevamente.
+              </Text>
+            </>
+          )}
+
+          {createProductStatus === "success" && (
+            <>
+              <FaCheckCircle size={56} className="text-green-500 animate-pop" />
+              <Text variant="h2" className="text-xl font-semibold text-center">
+                ¡Producto {productId ? "actualizado" : "creado"}!
+              </Text>
+              <Text
+                variant="body"
+                className="text-gray-500 text-center max-w-xs"
+              >
+                El producto fue {productId ? "actualizado" : "creado"}{" "}
+                correctamente.
               </Text>
             </>
           )}

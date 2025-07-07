@@ -1,60 +1,80 @@
-'use client';
+"use client";
+export const dynamic = "force-dynamic";
 
-import React, { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Text from '@/components/commons/atoms/Text';
-import Button from '@/components/commons/atoms/Button';
-import { LogIn, KeyRound } from 'lucide-react';
-import Logo from '@/components/commons/atoms/Logo';
+import React, { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Text from "@/components/commons/atoms/Text";
+import Button from "@/components/commons/atoms/Button";
+import { LogIn, KeyRound } from "lucide-react";
+import Logo from "@/components/commons/atoms/Logo";
 
 export default function SignIn() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const error = searchParams.get('error');
-  const errorDescription = searchParams.get('error_description');
+  const [query, setQuery] = useState<{
+    error?: string;
+    error_description?: string;
+  }>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    setQuery({
+      error: sp.get("error") || undefined,
+      error_description: sp.get("error_description") || undefined,
+    });
+  }, []);
+
+  const error = query.error;
+  const errorDescription = query.error_description;
+
   // Detectar si hay un error de contraseña olvidada inmediatamente
   useEffect(() => {
-    console.log('Error:', error, 'Descripción:', errorDescription);
-    
+    console.log("Error:", error, "Descripción:", errorDescription);
+
     // Limpiar cualquier sesión persistente al cargar la página de inicio de sesión
     // Esto asegura que no haya inicio de sesión automático después de cerrar sesión
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // Limpiar localStorage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('next-auth.callback-url');
-      localStorage.removeItem('next-auth.session-token');
-      
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("next-auth.callback-url");
+      localStorage.removeItem("next-auth.session-token");
+
       // Limpiar sessionStorage
       sessionStorage.clear();
-      
+
       // Eliminar todas las cookies relacionadas con la autenticación
-      document.cookie.split(';').forEach(cookie => {
-        const [name] = cookie.trim().split('=');
-        if (name.includes('next-auth') || name.includes('__Secure-next-auth')) {
+      document.cookie.split(";").forEach((cookie) => {
+        const [name] = cookie.trim().split("=");
+        if (name.includes("next-auth") || name.includes("__Secure-next-auth")) {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; secure; samesite=lax`;
         }
       });
     }
-    
+
     // Caso 1: Error específico de Azure B2C para contraseña olvidada
-    if (error === 'access_denied' && errorDescription?.includes('AADB2C90118')) {
-      console.log('Detectado error de contraseña olvidada (AADB2C90118), redirigiendo...');
+    if (
+      error === "access_denied" &&
+      errorDescription?.includes("AADB2C90118")
+    ) {
+      console.log(
+        "Detectado error de contraseña olvidada (AADB2C90118), redirigiendo..."
+      );
       setIsRedirecting(true);
       handlePasswordReset();
       return;
     }
     // Caso 2: Error de callback que puede venir de la página de "Olvidar contraseña"
-    else if (error === 'Callback') {
-      console.log('Detectado error de Callback, posiblemente de olvido de contraseña, redirigiendo...');
+    else if (error === "Callback") {
+      console.log(
+        "Detectado error de Callback, posiblemente de olvido de contraseña, redirigiendo..."
+      );
       setIsRedirecting(true);
       handlePasswordReset();
       return;
     }
-    
+
     // Si no hay redirección, mostrar el contenido
     const timer = setTimeout(() => setShowContent(true), 50);
     return () => clearTimeout(timer);
@@ -63,40 +83,48 @@ export default function SignIn() {
   // Función para iniciar sesión con Azure AD B2C
   const handleSignIn = async () => {
     // Forzar una nueva sesión con el parámetro prompt=login
-    await signIn('azure-ad', { 
-      callbackUrl: '/home',
-      prompt: 'login' // Esto fuerza a Azure B2C a mostrar la pantalla de inicio de sesión
+    await signIn("azure-ad", {
+      callbackUrl: "/home",
+      prompt: "login", // Esto fuerza a Azure B2C a mostrar la pantalla de inicio de sesión
     });
   };
 
   // Función para manejar el restablecimiento de contraseña
   const handlePasswordReset = async () => {
-    console.log('Iniciando flujo de restablecimiento de contraseña...');
+    console.log("Iniciando flujo de restablecimiento de contraseña...");
     try {
       // Construir la URL directa al flujo de restablecimiento de contraseña de Azure B2C
-      const tenantName = process.env.NEXT_PUBLIC_AZURE_AD_B2C_TENANT_NAME ?? "azurecnsum1";
+      const tenantName =
+        process.env.NEXT_PUBLIC_AZURE_AD_B2C_TENANT_NAME ?? "azurecnsum1";
       const clientId = process.env.NEXT_PUBLIC_AZURE_AD_B2C_CLIENT_ID ?? "";
-      const resetFlow = process.env.NEXT_PUBLIC_AZURE_AD_B2C_RESET_PASSWORD_FLOW ?? "B2C_1_passwordreset";
-      const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/azure-ad-reset`);
-      
+      const resetFlow =
+        process.env.NEXT_PUBLIC_AZURE_AD_B2C_RESET_PASSWORD_FLOW ??
+        "B2C_1_passwordreset";
+      const redirectUri = encodeURIComponent(
+        `${window.location.origin}/api/auth/callback/azure-ad-reset`
+      );
+
       // URL directa al flujo de restablecimiento de contraseña
       const resetUrl = `https://${tenantName}.b2clogin.com/${tenantName}.onmicrosoft.com/${resetFlow}/oauth2/v2.0/authorize?client_id=${clientId}&nonce=${Date.now()}&redirect_uri=${redirectUri}&scope=openid&response_type=code&prompt=login`;
-      
-      console.log('Redirigiendo a:', resetUrl);
-      
+
+      console.log("Redirigiendo a:", resetUrl);
+
       // Intentar primero con signIn
       try {
-        await signIn('azure-ad-reset', { 
-          callbackUrl: '/home',
-          redirect: true
+        await signIn("azure-ad-reset", {
+          callbackUrl: "/home",
+          redirect: true,
         });
       } catch (signInError) {
-        console.warn('Error con signIn, intentando redirección directa:', signInError);
+        console.warn(
+          "Error con signIn, intentando redirección directa:",
+          signInError
+        );
         // Si falla, redirigir directamente
         window.location.href = resetUrl;
       }
     } catch (error) {
-      console.error('Error al iniciar el flujo de restablecimiento:', error);
+      console.error("Error al iniciar el flujo de restablecimiento:", error);
     }
   };
 
@@ -121,12 +149,12 @@ export default function SignIn() {
       </div>
     );
   }
-  
+
   // No mostrar nada hasta que sepamos que no hay que redireccionar
   if (!showContent) {
     return null;
   }
-  
+
   // Mostrar la página normal de inicio de sesión
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
@@ -138,7 +166,7 @@ export default function SignIn() {
               <div className="absolute w-20 h-20 rounded-full bg-accent/20 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute w-16 h-16 rounded-full bg-accent/40 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute w-12 h-12 rounded-full bg-accent left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <Logo size={120} showText={false}/>
+                <Logo size={120} showText={false} />
               </div>
             </div>
           </div>
@@ -146,7 +174,8 @@ export default function SignIn() {
             Iniciar Sesión
           </Text>
           <Text variant="body" className="mb-6">
-            Accede a tu cuenta de Rabbit Hole para personalizar y comprar tus poleras favoritas.
+            Accede a tu cuenta de Rabbit Hole para personalizar y comprar tus
+            poleras favoritas.
           </Text>
         </div>
 
@@ -159,7 +188,7 @@ export default function SignIn() {
             <LogIn className="h-5 w-5" />
             Iniciar sesión con Azure AD B2C
           </Button>
-          
+
           <Button
             variant="secondary"
             className="w-full flex items-center justify-center gap-2 py-3"
@@ -171,7 +200,15 @@ export default function SignIn() {
 
           <div className="text-center mt-6">
             <Text variant="small" className="text-gray-500 dark:text-gray-400">
-              Al iniciar sesión, aceptas nuestros <span className="text-accent cursor-pointer">Términos y Condiciones</span> y <span className="text-accent cursor-pointer">Política de Privacidad</span>.
+              Al iniciar sesión, aceptas nuestros{" "}
+              <span className="text-accent cursor-pointer">
+                Términos y Condiciones
+              </span>{" "}
+              y{" "}
+              <span className="text-accent cursor-pointer">
+                Política de Privacidad
+              </span>
+              .
             </Text>
           </div>
 
@@ -179,7 +216,7 @@ export default function SignIn() {
             <Button
               variant="secondary"
               className="w-full flex items-center justify-center gap-2 py-2"
-              onClick={() => router.push('/home')}
+              onClick={() => router.push("/home")}
             >
               Volver al inicio
             </Button>

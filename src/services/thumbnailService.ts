@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "../config/apiClient";
 import { API_ROUTES } from "../config/apiRoutes";
 
 export const addThumbnailCartItem = async (
@@ -8,7 +8,7 @@ export const addThumbnailCartItem = async (
 ) => {
   try {
     const angleId = getIdByAngleName(angleName);
-    const response = await axios.post(
+    const response = await apiClient.post(
       API_ROUTES.thumbnails + "/carrito/" + cartItemId + "/angulo/" + angleId,
       { base64Image }
     );
@@ -26,7 +26,7 @@ export const addThumbnailOrderItem = async (
 ) => {
   try {
     const angleId = getIdByAngleName(angleName);
-    const response = await axios.post(
+    const response = await apiClient.post(
       API_ROUTES.thumbnails + "/orden/" + orderItemId + "/angulo/" + angleId,
       { base64Image }
     );

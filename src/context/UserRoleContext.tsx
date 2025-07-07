@@ -1,60 +1,70 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { validateToken } from "@/services/userService";
+import { useSession } from "next-auth/react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+} from "react";
 
 // Tipos de roles disponibles
-export type UserRole = 'user' | 'admin';
+export type UserRole = "user" | "admin";
 
 interface UserRoleContextType {
   role: UserRole;
   isAdmin: boolean;
-  setRole: (role: UserRole) => void;
-  toggleRole: () => void;
 }
 
-// Clave para almacenar el rol en localStorage
-const USER_ROLE_KEY = 'user_role';
-
 // Crear el contexto
-const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
+const UserRoleContext = createContext<UserRoleContextType | undefined>(
+  undefined
+);
 
 // Proveedor del contexto
-export const UserRoleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [role, setRoleState] = useState<UserRole>('user');
+export const UserRoleProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [role, setRole] = useState<UserRole>("user");
+  const { data: session } = useSession();
 
   // Cargar el rol del localStorage al iniciar
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedRole = localStorage.getItem(USER_ROLE_KEY) as UserRole | null;
-      if (savedRole && (savedRole === 'user' || savedRole === 'admin')) {
-        setRoleState(savedRole);
+    validateUserRole();
+  }, [session]);
+
+  useEffect(() => {
+    console.log({ role });
+  }, [role]);
+
+  const validateUserRole = async () => {
+    try {
+      if (!session?.accessToken) return;
+      const res = await validateToken(session.accessToken);
+      if (res.admin) {
+        setRole("admin");
+      } else {
+        setRole("user");
       }
-    }
-  }, []);
-
-  // Guardar el rol en localStorage cuando cambie
-  const setRole = (newRole: UserRole) => {
-    setRoleState(newRole);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(USER_ROLE_KEY, newRole);
+    } catch (error) {
+      console.error("Error al validar token:", error);
+      throw error;
     }
   };
 
-  // Alternar entre roles (útil para desarrollo)
-  const toggleRole = () => {
-    const newRole = role === 'user' ? 'admin' : 'user';
-    setRole(newRole);
-  };
+  const contextValue = useMemo(
+    () => ({
+      role,
+      isAdmin: role === "admin",
+    }),
+    [role]
+  );
 
   return (
-    <UserRoleContext.Provider 
-      value={{ 
-        role, 
-        isAdmin: role === 'admin', 
-        setRole, 
-        toggleRole 
-      }}
-    >
+    <UserRoleContext.Provider value={contextValue}>
       {children}
     </UserRoleContext.Provider>
   );
@@ -64,7 +74,7 @@ export const UserRoleProvider: React.FC<{ children: ReactNode }> = ({ children }
 export const useUserRole = (): UserRoleContextType => {
   const context = useContext(UserRoleContext);
   if (context === undefined) {
-    throw new Error('useUserRole debe ser usado dentro de un UserRoleProvider');
+    throw new Error("useUserRole debe ser usado dentro de un UserRoleProvider");
   }
   return context;
 };

@@ -38,6 +38,28 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 1.5 Validar acceso a rutas de administrador
+  if (pathname.startsWith("/admin")) {
+    // Requiere token
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/signin", request.url));
+    }
+    try {
+      const response = await fetch(VALIDATE_TOKEN_URL, {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+      const data = await response.json();
+      // Si el usuario no es admin, redirigir al home
+      if (!data.admin) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    } catch {
+      // Ante cualquier error, redirigir al home
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // 2. Validar acceso SOLO en rutas protegidas
   if (protectedRoutes.some((route) => pathname.startsWith(route))) {
     if (!token) {

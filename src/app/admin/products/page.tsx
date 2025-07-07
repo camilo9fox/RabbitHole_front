@@ -31,6 +31,7 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<
     { value: string; label: string }[]
   >([]);
+  const [showNotification, setShowNotification] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -65,12 +66,16 @@ export default function AdminProductsPage() {
   };
 
   const handleDeleteProduct = async (id: number) => {
-    try {
-      await deleteProduct(id);
-      setDeleteConfirmId(null);
-      loadProducts();
-    } catch (error) {
-      console.error("Error al eliminar producto:", error);
+    const res = await deleteProduct(id);
+    setDeleteConfirmId(null);
+    loadProducts();
+    console.log({ res });
+    if (!res.deleted) {
+      setShowNotification(true);
+      const timer = setTimeout(() => {
+        setShowNotification(false);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   };
 
@@ -162,92 +167,104 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen ${
-        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
-      }`}
-    >
-      <div className="container mx-auto pt-24 pb-8 px-4">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <Text variant="h1" className="mb-2">
-              Administración de Productos
-            </Text>
-            <Text
-              variant="body"
-              className={`${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
-            >
-              Gestiona los productos disponibles en la tienda
-            </Text>
-          </div>
-          <Button variant="primary" onClick={() => router.push("/customize")}>
-            Crear Nuevo Producto
-          </Button>
-        </div>
-
-        {!isAdmin ? (
-          <div
-            className={`border-l-4 p-4 mb-6 ${
-              isDarkMode
-                ? "bg-yellow-900 border-yellow-600 text-yellow-200"
-                : "bg-yellow-100 border-yellow-500 text-yellow-700"
-            }`}
-          >
-            <p>No tienes permisos de administrador para gestionar productos.</p>
-          </div>
-        ) : isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : products.length === 0 ? (
-          <div
-            className={`rounded-lg border p-8 text-center ${
-              isDarkMode
-                ? "bg-gray-800 border-gray-700"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <Text variant="h3" className="mb-4">
-              No hay productos
-            </Text>
-            <Text
-              variant="body"
-              className={`mb-6 ${
-                isDarkMode ? "text-gray-400" : "text-gray-500"
-              }`}
-            >
-              Aún no has creado ningún producto. Comienza creando tu primer
-              diseño.
-            </Text>
+    <>
+      <div
+        className={`min-h-screen ${
+          isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+        }`}
+      >
+        <div className="container mx-auto pt-24 pb-8 px-4">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <Text variant="h1" className="mb-2">
+                Administración de Productos
+              </Text>
+              <Text
+                variant="body"
+                className={`${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+              >
+                Gestiona los productos disponibles en la tienda
+              </Text>
+            </div>
             <Button variant="primary" onClick={() => router.push("/customize")}>
-              Crear Primer Producto
+              Crear Nuevo Producto
             </Button>
           </div>
-        ) : (
-          <div
-            className={`rounded-lg shadow-md overflow-hidden ${
-              isDarkMode ? "bg-gray-800" : "bg-white"
-            }`}
-          >
-            <DataTable
-              columns={columns}
-              data={products}
-              keyExtractor={(item) => item.id}
-              actions={renderActions}
-              searchFields={
-                [
-                  "nombre",
-                  "descripcion",
-                  "categoriaNombre",
-                ] as (keyof ProductOnGetDTO)[]
-              }
-              filterOptions={categories}
-              filterField={"categoriaNombre" as keyof ProductOnGetDTO}
-              className="rounded-lg shadow-lg overflow-hidden"
-            />
-          </div>
-        )}
+
+          {!isAdmin ? (
+            <div
+              className={`border-l-4 p-4 mb-6 ${
+                isDarkMode
+                  ? "bg-yellow-900 border-yellow-600 text-yellow-200"
+                  : "bg-yellow-100 border-yellow-500 text-yellow-700"
+              }`}
+            >
+              <p>
+                No tienes permisos de administrador para gestionar productos.
+              </p>
+            </div>
+          ) : isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : products.length === 0 ? (
+            <div
+              className={`rounded-lg border p-8 text-center ${
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700"
+                  : "bg-white border-gray-200"
+              }`}
+            >
+              <Text variant="h3" className="mb-4">
+                No hay productos
+              </Text>
+              <Text
+                variant="body"
+                className={`mb-6 ${
+                  isDarkMode ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
+                Aún no has creado ningún producto. Comienza creando tu primer
+                diseño.
+              </Text>
+              <Button
+                variant="primary"
+                onClick={() => router.push("/customize")}
+              >
+                Crear Primer Producto
+              </Button>
+            </div>
+          ) : (
+            <div
+              className={`rounded-lg shadow-md overflow-hidden ${
+                isDarkMode ? "bg-gray-800" : "bg-white"
+              }`}
+            >
+              <DataTable
+                columns={columns}
+                data={products}
+                keyExtractor={(item) => item.id}
+                actions={renderActions}
+                searchFields={
+                  [
+                    "nombre",
+                    "descripcion",
+                    "categoriaNombre",
+                  ] as (keyof ProductOnGetDTO)[]
+                }
+                filterOptions={categories}
+                filterField={"categoriaNombre" as keyof ProductOnGetDTO}
+                className="rounded-lg shadow-lg overflow-hidden"
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      {showNotification && (
+        <div className="fixed top-24 right-4 z-50 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-down">
+          El producto no se puede eliminar porque tiene ordenes pendientes.
+        </div>
+      )}
+    </>
   );
 }

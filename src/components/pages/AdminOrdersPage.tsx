@@ -12,6 +12,7 @@ import {
 import AccessDeniedMessage from "@/components/commons/atoms/AccessDeniedMessage";
 import OrdersList from "@/components/commons/organisms/OrdersList";
 import { updatePersonalizedDesignStatus } from "@/services/diseñoPersonalizadoService";
+import { useUserRole } from "@/context/UserRoleContext";
 
 export interface OrderState {
   id: number;
@@ -32,18 +33,8 @@ const AdminOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orderStates, setOrderStates] = useState<OrderState[]>([]);
-
-  // Estado para controlar si el usuario es admin
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const { isAdmin } = useUserRole();
   const isDarkMode = resolvedTheme === "dark";
-
-  // Verificar si es admin, pero solo en el cliente
-  useEffect(() => {
-    // Solo ejecutar en el cliente
-    if (typeof window !== "undefined") {
-      setIsAdmin(localStorage.getItem("user_role") === "admin");
-    }
-  }, []);
 
   const fetchOrderStates = async () => {
     try {

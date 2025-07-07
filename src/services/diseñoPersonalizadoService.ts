@@ -1,10 +1,10 @@
 import { API_ROUTES } from "@/config/apiRoutes";
-import axios from "axios";
+import apiClient from "../config/apiClient";
 import { DisenoPersonalizadoDTO } from "@/types/personalizedDesign";
 
 export const fetchPersonalizedDesigns = async (userId: number) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_ROUTES.disenoPersonalizado}/usuario/${userId}`
     );
     return response.data;
@@ -18,7 +18,7 @@ export const createPersonalizedDesign = async (
   design: DisenoPersonalizadoDTO
 ) => {
   try {
-    const response = await axios.post(API_ROUTES.disenoPersonalizado, design);
+    const response = await apiClient.post(API_ROUTES.disenoPersonalizado, design);
     return response.data;
   } catch (error) {
     console.error("Error al crear diseño personalizado:", error);
@@ -30,7 +30,7 @@ export const updatePersonalizedDesign = async (
   design: DisenoPersonalizadoDTO
 ) => {
   try {
-    const response = await axios.put(
+    const response = await apiClient.put(
       `${API_ROUTES.disenoPersonalizado}/${design.id}`,
       design
     );
@@ -43,7 +43,7 @@ export const updatePersonalizedDesign = async (
 
 export const deletePersonalizedDesign = async (id: number) => {
   try {
-    const response = await axios.delete(
+    const response = await apiClient.delete(
       `${API_ROUTES.disenoPersonalizado}/${id}`
     );
     return response.data;
@@ -58,7 +58,7 @@ export const updatePersonalizedDesignStatus = async (
   statusId: number
 ) => {
   try {
-    const response = await axios.put(
+    const response = await apiClient.put(
       `${API_ROUTES.disenoPersonalizado}/${id}/estado`,
       { estadoId: statusId, motivoRechazo: "", notasModificacion: "" }
     );
