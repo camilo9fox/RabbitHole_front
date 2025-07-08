@@ -41,6 +41,9 @@ jobs:
     steps:
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
+        with:
+          timeout: 600
+          command_timeout: 600
         env:
           AZURE_AD_B2C_TENANT_NAME: ${{ secrets.AZURE_AD_B2C_TENANT_NAME }}
           AZURE_AD_B2C_CLIENT_ID: ${{ secrets.AZURE_AD_B2C_CLIENT_ID }}
