@@ -72,7 +72,7 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
             # 3) recreate container
-            docker ps -q --filter "publish=127.0.0.1:3000" | xargs -r docker rm -f
+            docker ps -q --filter "publish=127.0.0.1:3000" | xargs -r docker rm -f || true
             docker rm -f front || true
             docker run -d --name front \
               -p 127.0.0.1:3000:3000 \
@@ -81,4 +81,4 @@ jobs:
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
             # 4) reload nginx to pick up new container or renewed certificates
-            sudo systemctl reload nginx
+            sudo systemctl reload nginx || true
