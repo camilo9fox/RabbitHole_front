@@ -16,7 +16,6 @@ const navigation = [
   { name: "Inicio", href: "/" },
   { name: "Tienda", href: "/shop" },
   { name: "Personalizar", href: "/customize" },
-  { name: "Nuevos Diseños", href: "/new-designs" },
   { name: "Nosotros", href: "/about" },
 ];
 
