@@ -26,15 +26,15 @@ export async function middleware(request: NextRequest) {
       const data = await response.json();
       if (data.message.includes("expired") && !pathname.includes("/auth")) {
         // Redirige a una página cliente donde se ejecuta signOut
-        document.cookie =
-          "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        return NextResponse.redirect(new URL("/auth/expired", request.url));
+        const res = NextResponse.redirect(new URL("/auth/expired", request.url));
+        res.cookies.delete("authToken");
+        return res;
       }
     } catch {
       // Si no se puede validar, redirige igual
-      document.cookie =
-        "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      return NextResponse.redirect(new URL("/auth/expired", request.url));
+      const res2 = NextResponse.redirect(new URL("/auth/expired", request.url));
+      res2.cookies.delete("authToken");
+      return res2;
     }
   }
 
