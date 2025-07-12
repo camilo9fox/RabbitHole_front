@@ -19,6 +19,7 @@ import Modal from "@/components/commons/organisms/Modal";
 import { Loader } from "lucide-react";
 import { FiShoppingCart } from "react-icons/fi";
 import { FaCheckCircle } from "react-icons/fa";
+import toast, { Toaster } from "react-hot-toast";
 // Ángulos disponibles para la visualización del producto
 const ANGLES = ["frente", "espalda", "izquierda", "derecha"];
 
@@ -36,7 +37,7 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const { colors, sizes } = useProductData();
-  const { persistentCart } = useCart();
+  const { persistentCart, cart } = useCart();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [angleDesigns, setAngleDesigns] = useState<any[]>([]);
 
@@ -218,6 +219,10 @@ export default function ProductDetail() {
 
   // Agregar al carrito
   const handleAddToCart = () => {
+    if (cart.items.length === 3) {
+      toast.error("Solo puede agregar un maximo de 3 items al carrito");
+      return;
+    }
     if (!product || !selectedColor || !selectedSize) return;
 
     // Capturar imágenes del canvas para todos los ángulos
@@ -517,6 +522,7 @@ export default function ProductDetail() {
 
   return (
     <>
+      <Toaster />
       <div
         className={`min-h-screen ${
           isDarkMode ? "bg-gray-950" : "bg-gray-50"

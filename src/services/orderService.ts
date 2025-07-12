@@ -9,6 +9,7 @@ export interface OrderUser {
 }
 
 export interface OrderAnonymous {
+  usuarioId: number | null;
   items: Item[];
   infoEnvio: InfoEnvio;
   infoPago: InfoPago;
@@ -53,7 +54,10 @@ export const createOrderUser = async (order: OrderUser) => {
 
 export const createOrderAnonymous = async (order: OrderAnonymous) => {
   try {
-    const response = await apiClient.post(API_ROUTES.orders + "/anonima", order);
+    const response = await apiClient.post(
+      API_ROUTES.orders + "/anonima",
+      order
+    );
     return response.data;
   } catch (error) {
     console.error("Error al crear orden:", error);
@@ -73,7 +77,9 @@ export const getOrderById = async (orderId: number) => {
 
 export const getOrdersByUserID = async (userId: number) => {
   try {
-    const response = await apiClient.get(API_ROUTES.orders + "/usuario/" + userId);
+    const response = await apiClient.get(
+      API_ROUTES.orders + "/usuario/" + userId
+    );
     return response.data;
   } catch (error) {
     console.error("Error al obtener ordenes:", error);

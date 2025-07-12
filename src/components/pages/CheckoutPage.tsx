@@ -24,7 +24,6 @@ import {
 } from "@/utils/cartHelpers";
 import {
   createOrderAnonymous,
-  createOrderUser,
   InfoEnvio,
   InfoPago,
 } from "@/services/orderService";
@@ -34,6 +33,7 @@ import { addThumbnailOrderItem } from "@/services/thumbnailService";
 import Modal from "../commons/organisms/Modal";
 import Loader from "../commons/atoms/Loader";
 import Text from "../commons/atoms/Text";
+import { chileanRegions, citiesByRegion } from "@/utils/chileLocations";
 
 // Componentes de formulario
 // Componente input con manejo de temas oscuro/claro
@@ -183,6 +183,7 @@ const CheckoutPage: React.FC = () => {
     const productItems: any[] = getProductOrderItemFromCartItem();
     if (customItems.length > 0 || productItems.length > 0) {
       const order = await createOrderAnonymous({
+        usuarioId: persistentCart.userId ?? null,
         items: [...customItems, ...productItems],
         infoEnvio: shippingInfo,
         infoPago: paymentInfo,
@@ -220,20 +221,20 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const createOrderFromBDCart = async (
-    infoEnvio: InfoEnvio,
-    infoPago: InfoPago
-  ) => {
-    const body = {
-      infoEnvio,
-      infoPago,
-      usuarioId: persistentCart.userId,
-      carritoId: persistentCart.cartId,
-    };
-    const order = await createOrderUser(body);
-    console.log("Orden guardada exitosamente:", order);
-    setOrderId(order.id);
-  };
+  // const createOrderFromBDCart = async (
+  //   infoEnvio: InfoEnvio,
+  //   infoPago: InfoPago
+  // ) => {
+  //   const body = {
+  //     infoEnvio,
+  //     infoPago,
+  //     usuarioId: persistentCart.userId,
+  //     carritoId: persistentCart.cartId,
+  //   };
+  //   const order = await createOrderUser(body);
+  //   console.log("Orden guardada exitosamente:", order);
+  //   setOrderId(order.id);
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     const form = e.currentTarget as HTMLFormElement;
@@ -275,11 +276,12 @@ const CheckoutPage: React.FC = () => {
     });
 
     try {
-      if (persistentCart.userId && persistentCart.cartId) {
-        await createOrderFromBDCart(shippingInfo, paymentInfo);
-      } else {
-        await createOrderFromMemoryCart(shippingInfo, paymentInfo);
-      }
+      // if (persistentCart.userId && persistentCart.cartId) {
+      //   await createOrderFromBDCart(shippingInfo, paymentInfo);
+      // } else {
+      //   await createOrderFromMemoryCart(shippingInfo, paymentInfo);
+      // }
+      await createOrderFromMemoryCart(shippingInfo, paymentInfo);
       setModalOpen(false);
       setOrderStatus("success");
       setStep(step + 1);
@@ -737,20 +739,45 @@ const CheckoutPage: React.FC = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Ciudad"
-          name="city"
-          value={formData.city}
-          onChange={handleChange}
-          required
-        />
-        <Input
-          label="Región"
+        <select
           name="state"
           value={formData.state}
           onChange={handleChange}
           required
-        />
+          className={`w-full px-4 py-2 rounded-md border shadow ${
+            isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white focus:border-blue-400"
+              : "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
+          } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+        >
+          <option value="">Seleccionar región</option>
+          {chileanRegions.map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+        <select
+          name="city"
+          value={formData.city}
+          onChange={handleChange}
+          required
+          disabled={formData.state === ""}
+          className={`w-full px-4 py-2 rounded-md border shadow ${
+            isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white focus:border-blue-400"
+              : "bg-white border-gray-300 text-gray-900 focus:border-blue-500"
+          } focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-75 transition-colors`}
+        >
+          <option value="">Seleccionar ciudad</option>
+          {formData.state !== ""
+            ? citiesByRegion[formData.state].map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))
+            : ""}
+        </select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

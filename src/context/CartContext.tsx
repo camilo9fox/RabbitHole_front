@@ -473,7 +473,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (persistentCart.userId !== null) {
-      setUserId(persistentCart.userId);
+      setUserId(null);
     } else {
       persistentCart.refreshCart();
     }

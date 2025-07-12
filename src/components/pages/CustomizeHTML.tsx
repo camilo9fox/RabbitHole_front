@@ -36,7 +36,7 @@ import { DisenoPersonalizadoDTO } from "@/types/personalizedDesign";
 import { convertAngleDesignToDTO } from "@/utils/designConverter";
 import { AngleDesign } from "@/types/product";
 // Los tipos se usan en la función saveAdminProduct
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import { useProductData } from "@/context/ProductDataContext";
 import { ProductOnCreatePutDTO } from "@/types/productData";
 import Modal from "../commons/organisms/Modal";
@@ -129,7 +129,7 @@ const CustomizeHTML = () => {
   const rightCanvasRef = useRef<HTMLCanvasHandle>(null);
 
   // Contexto del carrito
-  const { addCustomItem, persistentCart } = useCart();
+  const { addCustomItem, persistentCart, cart } = useCart();
   const [isOpenModalCreateProduct, setIsOpenModalCreateProduct] =
     useState(false);
   const [createProductStatus, setCreateProductStatus] = useState<
@@ -838,6 +838,10 @@ const CustomizeHTML = () => {
 
   // Función para agregar al carrito
   const handleAddToCart = () => {
+    if (cart.items.length === 3) {
+      toast.error("Solo puede agregar un maximo de 3 items al carrito");
+      return;
+    }
     // Guardar la vista actual para volver a ella
     const currentViewValue = formValues.view;
 
@@ -871,7 +875,7 @@ const CustomizeHTML = () => {
       !leftHasCustomization &&
       !rightHasCustomization
     ) {
-      alert(
+      toast.error(
         "Por favor, personaliza al menos una vista antes de agregar al carrito."
       );
       return;
@@ -1255,6 +1259,7 @@ const CustomizeHTML = () => {
 
   return (
     <>
+      <Toaster />
       <div className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Título y descripción */}
