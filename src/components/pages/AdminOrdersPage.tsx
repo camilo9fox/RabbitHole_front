@@ -159,7 +159,7 @@ const AdminOrdersPage: React.FC = () => {
 
   // Renderizar mensaje de acceso denegado si el usuario no es admin
   if (!isAdmin) {
-    return <AccessDeniedMessage />;
+    return <AccessDeniedMessage isDarkMode={isDarkMode} />;
   }
 
   return (

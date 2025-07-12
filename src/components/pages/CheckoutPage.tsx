@@ -236,6 +236,12 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    const form = e.currentTarget as HTMLFormElement;
+    // Si la validación HTML5 falla, muestra mensajes nativos y detén el flujo
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
     e.preventDefault();
     setModalOpen(true);
     setOrderStatus("loading");
@@ -867,6 +873,11 @@ const CheckoutPage: React.FC = () => {
             onChange={handleChange}
             placeholder="1234 5678 9012 3456"
             required
+            type="text"
+            inputMode="numeric"
+            pattern="^\d{16}$"
+            title="Ingresa un número de tarjeta válido"
+            maxLength={16}
           />
           <Input
             label="Nombre en la Tarjeta"
@@ -874,6 +885,9 @@ const CheckoutPage: React.FC = () => {
             value={formData.cardName}
             onChange={handleChange}
             required
+            type="text"
+            pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ ]{3,}$"
+            minLength={3}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -883,6 +897,9 @@ const CheckoutPage: React.FC = () => {
               onChange={handleChange}
               placeholder="MM/AA"
               required
+              type="text"
+              pattern="^(0[1-9]|1[0-2])/(\d{2})$"
+              maxLength={5}
             />
             <Input
               label="CVC"
@@ -891,6 +908,10 @@ const CheckoutPage: React.FC = () => {
               onChange={handleChange}
               placeholder="123"
               required
+              type="text"
+              inputMode="numeric"
+              pattern="^\d{3}$"
+              maxLength={3}
             />
           </div>
         </div>
@@ -910,8 +931,7 @@ const CheckoutPage: React.FC = () => {
           Volver a Envío
         </button>
         <button
-          type="button"
-          onClick={handleSubmit}
+          type="submit"
           className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           disabled={cart.items.length === 0}
         >

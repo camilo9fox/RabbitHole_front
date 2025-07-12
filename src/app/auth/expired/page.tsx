@@ -7,9 +7,8 @@ export default function ExpiredPage() {
   useEffect(() => {
     localStorage.removeItem("authToken");
     signOut();
-    setTimeout(() => {
-      redirect("/home");
-    }, 4000);
+
+    redirect("/home");
   }, []);
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
