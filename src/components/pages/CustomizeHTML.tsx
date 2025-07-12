@@ -680,7 +680,6 @@ const CustomizeHTML = () => {
 
     try {
       // Mostrar notificación de procesamiento
-      toast.loading("Guardando producto...");
 
       // 1. Preparar datos para la API
       const productDTO: ProductOnCreatePutDTO = {
