@@ -6,6 +6,7 @@ import HTMLCanvasV2 from "./HTMLCanvasV2";
 import { DesignImage, DesignText } from "@/types/product";
 import { imgSrcToBase64 } from "@/services/adminProductService";
 import { fetchProductById } from "@/services";
+import { useTheme } from "next-themes";
 
 interface ProductCardCanvasProps {
   id: string | number;
@@ -36,6 +37,8 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
   );
   const [designImage, setDesignImage] = useState<DesignImage | null>(null);
   const [imageError, setImageError] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
 
   // Función para verificar si una imagen existe
   const checkImageExists = useCallback((src: string): Promise<boolean> => {
@@ -261,7 +264,11 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
   ]);
 
   return (
-    <div className="max-w-lg bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <div
+      className={`max-w-lg ${
+        !isDarkMode ? "bg-white" : "bg-gray-800"
+      } rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300`}
+    >
       <Link href={`/product/${id}`} className="block relative">
         <div className="relative h-96 overflow-hidden">
           {imageError ? (
@@ -303,7 +310,11 @@ const ProductCardCanvas: React.FC<ProductCardCanvasProps> = ({
       </Link>
       <div className="p-4">
         <Link href={`/product/${id}`}>
-          <h3 className="text-lg font-semibold mb-2 hover:text-blue-600 transition-colors duration-200">
+          <h3
+            className={`${
+              isDarkMode ? "text-white" : "text-gray-800"
+            } text-lg font-semibold mb-2 hover:text-blue-600 transition-colors duration-200`}
+          >
             {title}
           </h3>
         </Link>

@@ -9,6 +9,7 @@ import ProductFilters from "@/components/commons/molecules/ProductFilters";
 import { useTheme } from "next-themes";
 import { fetchProducts } from "@/services";
 import { ProductOnGetDTO } from "@/types/productData";
+import Link from "next/link";
 
 // Función para convertir un AdminProduct a Product
 const adminProductToShopFormat = (adminProduct: ProductOnGetDTO): Product => {
@@ -232,13 +233,14 @@ export default function Shop() {
                   <p className="text-sm text-muted mb-4 relative z-10">
                     Crea tu diseño único con nuestro editor interactivo
                   </p>
-                  <button
-                    className={`w-full py-2 px-4 bg-accent ${
+                  <Link
+                    href="/customize"
+                    className={`w-full py-2 px-4 bg-accent flex justify-center items-center ${
                       isDarkMode ? "text-white" : "text-black"
-                    } rounded-lg font-medium hover:bg-accent/90 transition-colors`}
+                    } rounded-lg font-medium hover:bg-accent/90 transition-colors border rounded`}
                   >
                     Crear diseño
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

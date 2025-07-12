@@ -701,14 +701,13 @@ export default function ProductDetail() {
           </div>
 
           {/* Sección de productos relacionados (opcional) */}
-          <div className="mt-20">
+          {/* <div className="mt-20">
             <Text variant="h2" className="text-2xl font-bold mb-8">
               Productos relacionados
             </Text>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {/* Aquí irían los productos relacionados */}
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
       <Modal
